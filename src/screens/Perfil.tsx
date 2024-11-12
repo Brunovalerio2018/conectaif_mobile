@@ -4,27 +4,22 @@ import { DataTable } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { BarChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../app';
 
 interface UserStatus {
-  nome: string;
-  email: string;
-  endereco: string;
-  cpf: string;
-  matricula: string;
-  dataNascimento: string;
-  genero: string;
-  curso: string;
-  turma: string;
-  responsavel: string;
-  telefone: string;
+  nome: '';
+  email: '';
+  endereco: '';
+  cpf: '';
+  matricula: '';
 }
 
-const Perfil = ({ navigation }: any) => {
+const Perfil =  ({ navigation }: any) => {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // Adicionando estado de carregamento
 
-  const token = 'userToken';
+  const token =   localStorage.getItem('userToken');
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -43,9 +38,9 @@ const Perfil = ({ navigation }: any) => {
     Linking.openURL('https://classroom.google.com/');
   };
 
-  const fetchUserInfo = async (token: string) => {
+  const fetchUserInfo = async (tokenAcesso: string,idUser:number) => {
     try {
-      const response = await fetch('http://usuarios/UsuariosController_findById', {
+     /* const response = await fetch('http://usuarios/UsuariosController_findById', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,23 +48,22 @@ const Perfil = ({ navigation }: any) => {
         },
         body: JSON.stringify({ id: '' }),
       });
+*/
 
-      const data = await response.json();
+api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`
 
-      if (response.ok) {
+console.log(api.defaults.headers.common.Authorization)
+const response = await api.post(`usuarios/busca-um`,{id:idUser})
+      const data = await response.data;
+
+      if (data.id) {
         console.log('Informações do usuário:', data);
         setUserStatus({
           nome: data.nome || '',
           email: data.email || '',
           endereco: data.endereco || '',
           cpf: data.cpf || '',
-          matricula: data.matricula || '',
-          dataNascimento: data.dataNascimento || '',
-          genero: data.genero || '',
-          curso: data.curso || '',
-          turma: data.turma || '',
-          responsavel: data.responsavel || '',
-          telefone: data.telefone || '',
+          matricula: data.matricula || ''
         });
       } else {
         console.log('Erro ao buscar informações do usuário:', data.message);
@@ -82,40 +76,23 @@ const Perfil = ({ navigation }: any) => {
     }
   };
 
-  useEffect(() => {
-    if (token) {
-      fetchUserInfo(token);
-    }
-  }, [token]); // Chama a função de buscar dados ao montar o componente
+  
 
   const handleLogout = async () => {
     try {
-      // Remove o token do AsyncStorage
       await AsyncStorage.removeItem('userToken');
-      // Navega de volta para a tela de login
-      navigation.replace('Login'); // Aqui você substitui pela sua navegação para a tela de login
+      navigation.replace('Login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
     }
   };
 
-  const chartConfig = {
-    backgroundGradientFrom: '#FFFFFF',
-    backgroundGradientTo: '#4CAF50',
-    decimalPlaces: 4,
-    color: (opacity = 2) => `rgba(55, 152, 8, ${opacity})`,
-    labelColor: (opacity = 4) => `rgba(0, 0, 0, ${opacity})`,
-    style: {
-      borderRadius: 106,
-    },
-    propsForDots: {
-      r: '20',
-      strokeWidth: '10',
-      stroke: '#ffa726',
-    },
-  };
-
+  useEffect(() => {
+    if (token) {
+      fetchUserInfo(token, 5);
+    }
+  }, [token]);// Chama a função de buscar dados ao montar o componente
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileHeader}>
@@ -144,33 +121,13 @@ const Perfil = ({ navigation }: any) => {
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Dados Pessoais</Text>
         <View style={styles.listItem}>
-          <Text style={styles.itemTitle}>Telefone:</Text>
-          <Text style={styles.itemText}>{userStatus?.telefone}</Text>
-        </View>
-        <View style={styles.listItem}>
           <Text style={styles.itemTitle}>Endereço:</Text>
           <Text style={styles.itemText}>{userStatus?.endereco}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.itemTitle}>Nascimento:</Text>
-          <Text style={styles.itemText}>{userStatus?.dataNascimento}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.itemTitle}>Gênero:</Text>
-          <Text style={styles.itemText}>{userStatus?.genero}</Text>
         </View>
       </View>
 
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Campos Acadêmicos</Text>
-        <View style={styles.listItem}>
-          <Text style={styles.itemTitle}>Curso:</Text>
-          <Text style={styles.itemText}>{userStatus?.curso}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.itemTitle}>Turma:</Text>
-          <Text style={styles.itemText}>{userStatus?.turma}</Text>
-        </View>
       </View>
 
       
