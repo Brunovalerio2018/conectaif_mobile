@@ -216,3 +216,248 @@ const styles = StyleSheet.create({
 });
 
 export default LoginHome;
+
+
+
+
+
+
+
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Animated, StyleSheet, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import api from '../../app';
+
+const LoginHome = () => {
+  const [usuario, setUsuario] = useState('');
+  const [senha, setSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [salvarUsuario, setSalvarUsuario] = useState(false);
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const navigation = useNavigation(); 
+
+  useEffect(() => {
+    // Busca o nome de usuário salvo no armazenamento
+    const fetchUsuarioSalvo = async () => {
+      const usuarioSalvo = await AsyncStorage.getItem('savedUsername');
+      if (usuarioSalvo) {
+        setUsuario(usuarioSalvo);
+        setSalvarUsuario(true); // Marca o checkbox se houver um nome salvo
+      }
+    };
+    fetchUsuarioSalvo();
+  }, []);
+
+  const toggleMostrarSenha = () => {
+    setMostrarSenha(!mostrarSenha);
+  };
+
+  const toggleSalvarUsuario = () => {
+    setSalvarUsuario(!salvarUsuario);
+  };
+
+  const handlePress = async () => {
+    try {
+      const retorno = await api.post('autorizacao/login', { login: usuario, senha: senha });
+      const token = retorno?.data?.access_token;
+
+      if (token) {
+        await AsyncStorage.setItem('userToken', token);
+
+        if (salvarUsuario) {
+          await AsyncStorage.setItem('savedUsername', usuario);
+        } else {
+          await AsyncStorage.removeItem('savedUsername');
+        }
+
+        Animated.sequence([
+          Animated.timing(opacityAnim, {
+            toValue: 0.5,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        Alert.alert("Login bem-sucedido!", "Bem-vindo ao sistema.");
+        navigation.navigate("TabRoutes");
+      } else {
+        Alert.alert("Erro de Login", "Usuário ou senha incorretos.");
+      }
+    } catch (error) {
+      console.error("Erro ao realizar login: ", error);
+      Alert.alert("Erro de Login", "Houve um problema ao tentar fazer login. Tente novamente.");
+    }
+  };
+
+  const handleRecuperarSenha = () => {
+    navigation.navigate('RecuperarConta'); 
+  };
+
+  return (
+    <View style={styles.container}>
+     <View style={styles.logoContainer}>
+        <Image
+          source={require('../../../assets/logoConectaIF.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+
+      <Text style={styles.title}>Login ConectaIF</Text>
+
+      <Text style={styles.label1}>Usuário:</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="  Nome de usuário"
+        value={usuario}
+        onChangeText={setUsuario}
+      />
+
+      <Text style={styles.label2}>Senha:</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="   Digite sua senha"
+        secureTextEntry={!mostrarSenha}
+        value={senha}
+        onChangeText={setSenha}
+      />
+
+      <View style={styles.optionsContainer}>
+        <TouchableOpacity onPress={toggleMostrarSenha}>
+          <Text style={styles.optionText}>
+            {mostrarSenha ? 'Ocultar a senha' : 'Exibir a senha'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.spaceBetweenOptions} />
+
+        <TouchableOpacity onPress={handleRecuperarSenha}>
+          <Text style={styles.optionText}>
+            Esqueceu ou deseja alterar sua senha?
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Checkbox para salvar o nome de usuário */}
+      <View style={styles.checkboxContainer}>
+        <TouchableOpacity onPress={toggleSalvarUsuario}>
+          <Text style={styles.checkboxLabel}>
+            {salvarUsuario ? '☑' : '☐'} Salvar nome de usuário
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Animated.View style={{ opacity: opacityAnim }}>
+        <TouchableOpacity
+          style={styles.neonButton}
+          onPress={handlePress}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>Acessar</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      <Text style={styles.watermark}>SISTEMA UNIFICADO CONECTAIF</Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: -10,
+  },
+  logo: {
+   width: '100%',
+    height: '50%',
+  },
+  title: {
+    fontSize: 25,
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#000',
+  },
+  label1: {
+    fontSize: 20,
+    marginBottom: 0,
+    marginLeft: -220,
+    color: '#333',
+  },
+  label2: {
+    fontSize: 20,
+    marginBottom: 0,
+    borderTopLeftRadius: 20,
+    marginLeft: -210,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#359830',
+    padding: 4,
+    marginBottom: 13,
+    borderRadius: 20,
+    backgroundColor: '#eaeaea',
+    width: '100%',
+    maxWidth: 290,
+  },
+  optionsContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  spaceBetweenOptions: {
+    height: 25,
+  },
+  optionText: {
+    color: '#0066cc',
+    marginBottom: -10,
+  },
+  checkboxContainer: {
+    marginVertical: 25,
+  },
+  checkboxLabel: {
+    color: '#333',
+    fontSize: 16,
+  },
+  neonButton: {
+    backgroundColor: '#359830',
+    paddingVertical: 9,
+    paddingHorizontal: 60,
+    borderRadius: 25,
+    shadowColor: '#00ff00',
+    shadowOffset: { width: 0.10, height: 0 },
+    shadowOpacity: 10,
+    shadowRadius: 10,
+    elevation: 2,
+    justifyContent: 'center',
+    marginVertical: 0,
+    borderWidth: 0,
+    borderColor: '#00ff00',
+  },
+  buttonText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  watermark: {
+    position: 'absolute',
+    top: 30,
+    right: 20,
+    fontSize: 12,
+    color: 'rgba(0, 0, 0, 0.2)',
+  },
+});'100'
+
+export default LoginHome;
