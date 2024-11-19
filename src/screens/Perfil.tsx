@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Linking, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../app';
-import { Avatar } from 'react-native-paper';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 interface StatusDoUsuario {
   nome: string;
@@ -25,7 +25,6 @@ const Perfil = ({ navigation }: any) => {
 
   const token = AsyncStorage.getItem('userToken').then(res => setTokenAcesso(res ?? '-'));
 
-
   const buscarInformacoesDoUsuario = async (tokenAcesso: string, idUsuario: number) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
@@ -44,6 +43,8 @@ const Perfil = ({ navigation }: any) => {
           curso: dados.curso || '',
           professor: dados.professor || '',
         });
+        setImagem(dados.imagemUrl || '');
+
       } else {
         Alert.alert('Erro', 'Erro ao buscar informações do usuário.');
       }
@@ -65,15 +66,46 @@ const Perfil = ({ navigation }: any) => {
     }
   };
 
+  const handleImageUpload = () => {
+    launchImageLibrary({ mediaType: 'photo', quality: 1 }, (response) => {
+      if (response.didCancel) {
+        console.log('O usuário cancelou a seleção de imagem.');
+      } else if (response.errorCode) {
+        console.error('Erro ao selecionar a imagem: ', response.errorMessage);
+        Alert.alert('Erro', 'Falha ao selecionar a imagem.');
+      } else {
+        // Envia a imagem para o servidor
+
+        api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
+        api.post('usuarios/upload-imagem')
+          .then((resposta) => {
+            if (resposta.data.success) {
+              setImagem(resposta.data.imagemUrl); // Supondo que o servidor retorna a URL da imagem salva
+              Alert.alert('Sucesso', 'Imagem de perfil atualizada com sucesso!');
+            } else {
+              Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
+            }
+          })
+          .catch((erro) => {
+            console.error('Erro ao fazer upload da imagem:', erro);
+            Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
+          });
+      }
+    });
+  };
+
   useEffect(() => {
     if (tokenAcesso) {
-      buscarInformacoesDoUsuario(tokenAcesso, 5); // Exemplo com ID 5
+      buscarInformacoesDoUsuario(tokenAcesso, 13); 
     }
   }, [tokenAcesso]);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.cabecalhoPerfil}>
+        <TouchableOpacity onPress={handleImageUpload}>
+          <Image source={{ uri: imagem || ' ' }} style={styles.imagemPerfil} />
+        </TouchableOpacity>
         <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Não Disponível'}</Text>
         <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
         <Text style={styles.detalhesPerfil}>Curso: {statusDoUsuario?.curso || 'Não disponível'}</Text>
@@ -108,12 +140,6 @@ const Perfil = ({ navigation }: any) => {
           <Text style={styles.textoBotao}>Abrir Formulário Google</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.secaoContainer}>
-        <TouchableOpacity style={styles.botaoLogout} onPress={handleLogout}>
-          <Text style={styles.textoBotao}>Sair</Text>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 };
@@ -121,7 +147,7 @@ const Perfil = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 10,
     backgroundColor: '#f8f9fa',
   },
   cabecalhoPerfil: {
@@ -129,48 +155,50 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   imagemPerfil: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 10,
   },
   nomePerfil: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
   },
   detalhesPerfil: {
-    marginTop: 15,
-    fontSize: 16,
+    marginTop: 10,
+    fontSize: 14,
     color: '#555',
   },
   secaoContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   tituloSecao: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   itemLista: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 18,
   },
   tituloItem: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
   textoItem: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#555',
+    flex: 1,
+    textAlign: 'right',
   },
   botao: {
     backgroundColor: '#4CAF50',
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 15,
@@ -180,13 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  botaoLogout: {
-    backgroundColor: '#FF5722',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 20,
-  },
 });
+
 
 export default Perfil;
