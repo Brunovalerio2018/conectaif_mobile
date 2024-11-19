@@ -172,6 +172,7 @@ const styles = StyleSheet.create({
   },
   secaoContainer: {
     marginBottom: 10,
+    paddingHorizontal: 10,
   },
   tituloSecao: {
     fontSize: 16,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   botao: {
     backgroundColor: '#4CAF50',
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 0,
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 15,
