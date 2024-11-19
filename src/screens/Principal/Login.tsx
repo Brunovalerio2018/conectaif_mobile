@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: -10,
+    marginBottom: 0,
   },
   logo: {
     width: 1000,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     marginBottom: -10,
   },
   checkboxContainer: {
-    marginVertical: 10,
+    marginVertical: 30,
   },
   checkboxLabel: {
     color: '#333',
@@ -236,12 +236,12 @@ const styles = StyleSheet.create({
   neonButton: {
     backgroundColor: '#359830',  // A cor #359830 foi mantida
     paddingVertical: 12,
-    paddingHorizontal: 70,
+    paddingHorizontal: 20,
     borderRadius: 50,
     shadowRadius: 10,
     elevation: 5,
     justifyContent: 'center',
-    marginVertical: 20,
+    marginVertical: 0,
     borderWidth: 0,
     borderColor: '#359830',  // A cor #359830 foi mantida
     alignItems: 'center',
