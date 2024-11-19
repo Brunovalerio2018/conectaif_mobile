@@ -24,7 +24,7 @@ export default function Reunioes() {
   const fetchReunioes = async (tokenAcess: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get(`/reunioes`); // Supondo que a API tenha uma rota para as reuniões
+      const response = await api.get(`/reuniao`); // Supondo que a API tenha uma rota para as reuniões
       const data = await response.data;
 
       if (data) {
@@ -101,7 +101,6 @@ export default function Reunioes() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Calendário de Reuniões</Text>
 
       {/* Componente de Calendário */}
       <Calendar
