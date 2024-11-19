@@ -1,129 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, TextInput, FlatList } from 'react-native';
-import { Calendar } from 'react-native-calendars'; // Componente de Calendário
+import CalendarPicker from 'react-native-calendar-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../app';
-
-// Tipo de dados das reuniões
-type Reuniao = {
-  id: string;
-  titulo: string;
-  descricao: string;
-  data: string;
-  status: string;
-};
+import moment from 'moment';
+import 'moment/locale/pt-br'; // Importando o momento para definir o idioma
 
 export default function Reunioes() {
-  const [reunioes, setReunioes] = useState<Reuniao[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>(""); // Para busca de reuniões
+  const [reunioes, setReunioes] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [tokenAcess, setTokenAcess] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null); // Data selecionada no calendário
-  const [markedDates, setMarkedDates] = useState<any>({}); // Para marcar as datas com eventos
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState<any>({});
 
-  // Função para buscar as reuniões da API
+  useEffect(() => {
+    const getToken = async () => {
+      const storedToken = await AsyncStorage.getItem('userToken');
+      setTokenAcess(storedToken);
+    };
+    getToken();
+  }, []);
+
+  useEffect(() => {
+    if (tokenAcess) {
+      console.log('Token encontrado:', tokenAcess);
+      fetchReunioes(tokenAcess);
+    }
+  }, [tokenAcess]);
+
   const fetchReunioes = async (tokenAcess: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get(`/reuniao`); // Supondo que a API tenha uma rota para as reuniões
-      const data = await response.data;
+      const response = await api.get(`/reuniao`);
+      const data = response.data;
 
       if (data) {
-        setReunioes(
-          data.map((reuniao: any) => ({
-            id: reuniao.id,
-            titulo: reuniao.titulo || "",
-            descricao: reuniao.descricao || "",
-            data: reuniao.data || "",
-            status: reuniao.status || "Pendente", // Exemplo de status
-          }))
-        );
-
-        // Atualiza as datas marcadas com base nas reuniões
+        setReunioes(data);
         const newMarkedDates: any = {};
         data.forEach((reuniao: any) => {
           newMarkedDates[reuniao.data] = {
             marked: true,
             selected: false,
-            dotColor: 'red', // Cor do ponto, por exemplo, para eventos
-            selectedColor: 'green', // Cor de seleção
+            dotColor: 'red',
+            selectedColor: 'green',
           };
         });
         setMarkedDates(newMarkedDates);
-      } else {
-        console.log("Erro ao buscar reuniões:", data.message);
       }
     } catch (error) {
-      console.log("Erro ao buscar reuniões:", error);
+      console.log('Erro ao buscar reuniões:', error);
     }
   };
 
-  // Função para buscar o token na AsyncStorage
-  useEffect(() => {
-    const getToken = async () => {
-      const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcess(storedToken); // Atualiza o estado do token
-    };
-
-    getToken();
-  }, []); // A dependência está vazia para buscar o token uma vez ao carregar o componente
-
-  // Quando o token for obtido, buscar as reuniões
-  useEffect(() => {
-    if (tokenAcess) {
-      console.log("Token encontrado:", tokenAcess);
-      fetchReunioes(tokenAcess); // Carregar as reuniões ao ter o token
-    } else {
-      console.log("Token não encontrado");
-    }
-  }, [tokenAcess]); // Dependência de tokenAcess para atualizar as reuniões
-
-  // Função para filtrar as reuniões conforme a busca
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
-  // Função para renderizar os itens da lista de reuniões
-  const renderReuniaoItem = ({ item }: { item: Reuniao }) => (
-    <View style={styles.reuniaoItem}>
-      <Text style={styles.reuniaoTitle}>{item.titulo}</Text>
-      <Text>{item.descricao}</Text>
-      <Text>{`Data: ${item.data}`}</Text>
-      <Text>{`Status: ${item.status}`}</Text>
-      <Button title="Ver Detalhes" onPress={() => {/* Navegar para tela de detalhes da reunião */}} />
-    </View>
-  );
-
-  // Função para filtrar as reuniões pela data selecionada no calendário
   const filterByDate = (date: string) => {
     setSelectedDate(date);
-    return reunioes.filter(reuniao => reuniao.data === date);
+    return reunioes.filter((reuniao: any) => reuniao.data === date);
   };
 
   return (
     <View style={styles.container}>
+      {/* Calendário com dias e meses personalizados */}
+      <View style={styles.calendarWrapper}>
+        <CalendarPicker
+          onDateChange={(date: any) => {
+            const selectedDate = moment(date).format('YYYY-MM-DD');
+            console.log('Data selecionada:', selectedDate);
+            filterByDate(selectedDate);
+          }}
+          selectedDate={selectedDate ? moment(selectedDate) : null}
+          weekdays={['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']}
+          months={[
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+          ]}
+          todayTextStyle={{ color: '#7CFC00' }}
+          selectedDayColor="green"
+          selectedDayTextColor="white"
+          todayBackgroundColor="green"
+          customDatesStyles={Object.keys(markedDates).map((date) => ({
+            date: moment(date, 'YYYY-MM-DD').toDate(),
+            style: { backgroundColor: 'red' },
+            textStyle: { color: 'white' },
+          }))}
+          previousTitle="Anterior"  // Texto personalizado para o botão de "Anterior"
+          nextTitle="Próximo"       // Texto personalizado para o botão de "Próximo"
+        />
+      </View>
 
-      {/* Componente de Calendário */}
-      <Calendar
-        onDayPress={(day: { dateString: string; }) => {
-          console.log("Data selecionada:", day.dateString);
-          filterByDate(day.dateString); // Filtra reuniões pela data selecionada
-        }}
-        markedDates={markedDates} // Marca as datas que possuem eventos
-        theme={{
-          selectedDayBackgroundColor: 'green',
-          selectedDayTextColor: 'white',
-          todayTextColor: 'green',
-          arrowColor: 'green',
-          monthTextColor: 'green',
-          textSectionTitleColor: 'green',
-          textDayFontWeight: 'bold',
-          textDayFontSize: 16,
-          textMonthFontWeight: 'bold',
-          textMonthFontSize: 20,
-        }}
-      />
-
-      {/* Campo de busca de reuniões */}
+      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar reunião..."
@@ -131,14 +98,23 @@ export default function Reunioes() {
         onChangeText={handleSearch}
       />
 
-      {/* Lista de reuniões filtradas */}
+      {/* Lista de reuniões */}
       <FlatList
-        data={reunioes.filter((reuniao) => 
-          reuniao.titulo.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          (selectedDate ? reuniao.data === selectedDate : true)
+        data={reunioes.filter(
+          (reuniao: any) =>
+            reuniao.titulo.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            (selectedDate ? reuniao.data === selectedDate : true)
         )}
         keyExtractor={(item) => item.id}
-        renderItem={renderReuniaoItem}
+        renderItem={({ item }: { item: any }) => (
+          <View style={styles.reuniaoItem}>
+            <Text style={styles.reuniaoTitle}>{item.titulo}</Text>
+            <Text>{item.descricao}</Text>
+            <Text>{`Data: ${item.data}`}</Text>
+            <Text>{`Status: ${item.status}`}</Text>
+            <Button title="Ver Detalhes" onPress={() => {}} />
+          </View>
+        )}
       />
     </View>
   );
@@ -150,11 +126,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  calendarWrapper: {
     marginBottom: 20,
+    elevation: 5, // Para Android
+    shadowColor: '#359830',
+    shadowOffset: { width: 10, height: 20 },
+    shadowOpacity: 10.20,
+    shadowRadius: 22,
+    borderRadius: 5.10, // Arredondando os cantos para maior realismo
+    backgroundColor: 'white',
   },
   searchInput: {
     height: 40,
@@ -162,7 +142,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 20,
     paddingLeft: 8,
-    borderRadius: 4,
+    borderRadius: 8 ,
   },
   reuniaoItem: {
     padding: 10,
