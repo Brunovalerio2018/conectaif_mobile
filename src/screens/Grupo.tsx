@@ -22,7 +22,7 @@ export default function Grupo() {
   const fetchGroups = async () => {
     if (token) {
       try {
-        const response = await api.get("https://api.exemplo.com/grupos", {
+        const response = await api.get("http://localhost:3335/docs#/grupos", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
