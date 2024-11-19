@@ -20,7 +20,7 @@ export default function Ocorrencias() {
   const fetchOcorrencias = async (tokenAcess: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get("/ocorrencias");
+      const response = await api.get("/ocorrencia");
       const data = response.data;
 
       if (data) {
@@ -44,7 +44,7 @@ export default function Ocorrencias() {
   // Função para alterar o status da ocorrência
   const marcarComoResolvida = async (idOcorrencia: string) => {
     try {
-      await api.put(`/ocorrencias/${idOcorrencia}/marcar-resolvida`);
+      await api.put(`/ocorrencia/13${idOcorrencia}/`);
       setOcorrencias((prevOcorrencias) =>
         prevOcorrencias.map((ocorrencia) =>
           ocorrencia.id === idOcorrencia ? { ...ocorrencia, status: "resolvida" } : ocorrencia
