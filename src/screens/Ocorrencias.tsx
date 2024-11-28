@@ -41,7 +41,6 @@ export default function Ocorrencias() {
     }
   };
 
-  // Função para alterar o status da ocorrência
   const marcarComoResolvida = async (idOcorrencia: string) => {
     try {
       await api.put(`/ocorrencia/13${idOcorrencia}/`);
