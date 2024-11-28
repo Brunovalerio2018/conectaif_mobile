@@ -1,9 +1,8 @@
-// screens/Documentos.tsx
-
 import React, { useState, useEffect } from "react";
 import { View, Text, Button, FlatList, StyleSheet, TextInput, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../app";
+import * as DocumentPicker from "expo-document-picker";
 
 interface Documento {
   id: string;
@@ -36,7 +35,7 @@ const Documentos = () => {
   const fetchDocumentos = async (tokenAcess: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get("/documentos");
+      const response = await api.get("/documento/buscar-todos");
       const data = response.data;
 
       if (data) {
@@ -48,17 +47,23 @@ const Documentos = () => {
     }
   };
 
-  const handleDownload = (url: string) => {
-    // Implementação do download (ou navegação para outra página)
-    Alert.alert("Download", `Documento baixado com sucesso: ${url}`);
+  const handleDownload = async (id: string) => {
+    try {
+      const response = await api.get(`/documento/${id}/download`, {
+        responseType: "blob", // Ou "arraybuffer" dependendo do formato do arquivo
+      });
+      // Implementação adicional para salvar o arquivo pode ser feita aqui
+      Alert.alert("Sucesso", `Download concluído para o documento com ID: ${id}`);
+    } catch (error) {
+      console.error("Erro ao baixar documento:", error);
+      Alert.alert("Erro", "Não foi possível realizar o download.");
+    }
   };
+
+ 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Documentos</Text>
-
-      {/* Botão para upload */}
-      <Button title="Upload de Documento" onPress={() => Alert.alert("Upload", "Função de upload em desenvolvimento.")} />
 
       {/* Campo de busca */}
       <TextInput
@@ -78,7 +83,7 @@ const Documentos = () => {
           <View style={styles.documentItem}>
             <Text style={styles.documentTitle}>{item.titulo}</Text>
             <Text>{`Categoria: ${item.categoria}`}</Text>
-            <Button title="Download" onPress={() => handleDownload(item.url)} />
+            <Button title="Download" onPress={() => handleDownload(item.id)} />
           </View>
         )}
         ListEmptyComponent={
