@@ -1,92 +1,100 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, Alert } from "react-native";
-import api from "../app";
+import api from "../app"; // Certifique-se de que o `api` está configurado corretamente
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface Ocorrencias {
   id: string;
   titulo: string;
   descricao: string;
-  data: string; // Data da ocorrência
-  status: string; // Status da ocorrência (pendente, resolvida, etc.)
+  data: string;
+  status: string;
 }
 
 export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencias[]>([]);
-  const [searchQuery, setSearchQuery] = useState(""); // Para busca de ocorrências
+  const [searchQuery, setSearchQuery] = useState("");
   const [tokenAcess, setTokenAcess] = useState<string | null>(null);
 
-  // Função para buscar as ocorrências da API
-  const fetchOcorrencias = async (tokenAcess: string) => {
+  const fetchOcorrencias = async () => {
+    if (!tokenAcess) {
+      console.log("Token não disponível");
+      return;
+    }
+
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
       const response = await api.get("/ocorrencia");
-      const data = response.data;
 
-      if (data) {
+      if (response.status === 200) {
+        const data = response.data;
+        console.log("Ocorrências carregadas:", data); // Log para depuração
         setOcorrencias(
           data.map((ocorrencia: any) => ({
             id: ocorrencia.id,
-            titulo: ocorrencia.titulo || "",
-            descricao: ocorrencia.descricao || "",
-            data: ocorrencia.data || "",
-            status: ocorrencia.status || "pendente", // Default para pendente
+            titulo: ocorrencia.titulo || "Sem título",
+            descricao: ocorrencia.descricao || "Sem descrição",
+            data: ocorrencia.data || "Data não disponível",
+            status: ocorrencia.status || "pendente",
           }))
         );
       } else {
-        console.log("Erro ao buscar ocorrências:", data.message);
+        console.log("Erro ao buscar ocorrências:", response.statusText);
+        Alert.alert("Erro", "Não foi possível carregar as ocorrências.");
       }
     } catch (error) {
       console.log("Erro ao buscar ocorrências:", error);
+      Alert.alert("Erro", "Ocorreu um problema ao buscar as ocorrências.");
     }
   };
 
   const marcarComoResolvida = async (idOcorrencia: string) => {
     try {
-      await api.put(`/ocorrencia/13${idOcorrencia}/`);
-      setOcorrencias((prevOcorrencias) =>
-        prevOcorrencias.map((ocorrencia) =>
-          ocorrencia.id === idOcorrencia ? { ...ocorrencia, status: "resolvida" } : ocorrencia
-        )
-      );
+      const response = await api.put(`/ocorrencia/${idOcorrencia}`, { status: "resolvida" });
+
+      if (response.status === 200) {
+        setOcorrencias((prevOcorrencias) =>
+          prevOcorrencias.map((ocorrencia) =>
+            ocorrencia.id === idOcorrencia ? { ...ocorrencia, status: "resolvida" } : ocorrencia
+          )
+        );
+      } else {
+        console.log("Erro ao marcar ocorrência como resolvida:", response.statusText);
+        Alert.alert("Erro", "Falha ao marcar a ocorrência como resolvida.");
+      }
     } catch (error) {
       console.log("Erro ao marcar ocorrência como resolvida:", error);
-      Alert.alert("Erro", "Falha ao marcar ocorrência como resolvida.");
+      Alert.alert("Erro", "Não foi possível atualizar a ocorrência.");
     }
   };
 
-  // Buscando o token na AsyncStorage
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcess(storedToken); // Atualiza o estado do token
+      setTokenAcess(storedToken);
     };
 
     getToken();
-  }, []); // A dependência está vazia para buscar o token uma vez ao carregar o componente
+  }, []);
 
   useEffect(() => {
     if (tokenAcess) {
-      fetchOcorrencias(tokenAcess); // Carregar as ocorrências ao ter o token
-    } else {
-      console.log("Token não encontrado");
+      fetchOcorrencias();
     }
-  }, [tokenAcess]); // Dependência de tokenAcess para atualizar as ocorrências
+  }, [tokenAcess]);
 
-  // Filtra as ocorrências com base na pesquisa
-  const filteredOcorrencias = ocorrencias.filter((ocorrencia) =>
-    ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ocorrencia.descricao.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOcorrencias = ocorrencias.filter(
+    (ocorrencia) =>
+      ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ocorrencia.descricao.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Renderiza as ocorrências
   const renderOcorrencia = ({ item }: { item: Ocorrencias }) => (
     <View style={styles.ocorrenciaItem}>
       <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
       <Text style={styles.ocorrenciaDescription}>{item.descricao}</Text>
-      <Text style={styles.ocorrenciaDate}>{item.data}</Text> {/* Exibe a data */}
-      <Text style={styles.ocorrenciaStatus}>{item.status}</Text> {/* Exibe o status */}
-
+      <Text style={styles.ocorrenciaDate}>{item.data}</Text>
+      <Text style={styles.ocorrenciaStatus}>{item.status}</Text>
       {item.status !== "resolvida" && (
         <TouchableOpacity onPress={() => marcarComoResolvida(item.id)} style={styles.markAsResolvedButton}>
           <Text style={styles.markAsResolvedText}>Marcar como resolvida</Text>
@@ -97,30 +105,17 @@ export default function Ocorrencias() {
 
   return (
     <View style={styles.container}>
-      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar ocorrências..."
         value={searchQuery}
-        onChangeText={setSearchQuery} // Atualiza o estado de bus
+        onChangeText={setSearchQuery}
       />
-
-      <Text style={styles.sectionTitle}>Pendentes</Text>
       <FlatList
-        data={filteredOcorrencias.filter((ocorrencia) => ocorrencia.status === "pendente")}
+        data={filteredOcorrencias}
         renderItem={renderOcorrencia}
         keyExtractor={(item) => item.id}
-        style={styles.ocorrenciaList}
-        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência pendente</Text>}
-      />
-
-      <Text style={styles.sectionTitle}>Resolvidas</Text>
-      <FlatList
-        data={filteredOcorrencias.filter((ocorrencia) => ocorrencia.status === "resolvida")}
-        renderItem={renderOcorrencia}
-        keyExtractor={(item) => item.id}
-        style={styles.ocorrenciaList}
-        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência resolvida</Text>}
+        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
       />
     </View>
   );
@@ -140,16 +135,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f1f1",
     borderRadius: 5,
     fontSize: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  ocorrenciaList: {
-    width: "90%",
   },
   ocorrenciaItem: {
     backgroundColor: "#f9f9f9",
