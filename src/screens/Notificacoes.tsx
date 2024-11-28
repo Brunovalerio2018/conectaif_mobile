@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput } from "react-native";
-import CalendarPicker from "react-native-calendar-picker";
-import moment from "moment";
-import "moment/locale/pt-br";
+import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity } from "react-native";
 import api from "../app";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -10,139 +7,89 @@ interface Notificacao {
   id: string;
   titulo: string;
   descricao: string;
-  data: string;
-  status: string;
+  createdAt: string;
+  tpdestinatario: string;
 }
 
-export default function Notificacao() {
+export default function Notificacoes() {
+  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false); // Estado para controle de carregamento
+  const [timeoutReached, setTimeoutReached] = useState<boolean>(false); // Estado para controle do timeout
 
-    const [ocorrencias, setOcorrencias] = useState<Notificacao[]>([]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [tokenAcess, setTokenAcess] = useState<string | null>(null);
-    const [markedDates, setMarkedDates] = useState<any>({});
-    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  useEffect(() => {
+    const getToken = async () => {
+      const storedToken = await AsyncStorage.getItem("userToken");
+      setTokenAcess(storedToken);
+    };
+    getToken();
+  }, []);
 
-          useEffect(() => {
-            const getToken = async () => {
-              const storedToken = await AsyncStorage.getItem("userToken");
-              setTokenAcess(storedToken);
-            };
-            getToken();
-          }, []);
+  useEffect(() => {
+    if (tokenAcess) {
+      fetchNotificacoes(tokenAcess);
+    }
+  }, [tokenAcess]);
 
-            useEffect(() => {
-              if (tokenAcess) {
-                fetchOcorrencias(tokenAcess);
-                // Enviar automaticamente a notificação como visualizada
-                markAsVisualizada(tokenAcess);
-              }
-            }, [tokenAcess]);
+  // Função para buscar notificações
+  const fetchNotificacoes = async (tokenAcess: string) => {
+    setLoading(true); // Começa o carregamento
+    setTimeoutReached(false); // Resetando o timeout
 
-  const fetchOcorrencias = async (tokenAcess: string) => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+      setTimeoutReached(true); // Se passar de 10 segundos, exibe a mensagem de "Nenhum documento encontrado!"
+    }, 10000); // 10 segundos
+
     try {
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.post("/notificacao");
-      const data = response.data;
+      const response = await api.get("/notificacao");
 
-      if (data) {
-        setOcorrencias(data);
-        const newMarkedDates: any = {};
-        data.forEach((ocorrencia: any) => {
-          newMarkedDates[ocorrencia.data] = {
-            marked: true,
-            dotColor: "red",
-          };
-        });
-        setMarkedDates(newMarkedDates);
+      if (response.status === 200) {
+        setNotificacoes(response.data);
       }
     } catch (error) {
-      console.error("Erro ao buscar ocorrências:", error);
+      console.error("Erro ao buscar notificações:", error);
+    } finally {
+      clearTimeout(timer); // Limpa o timer caso a busca termine antes de 10 segundos
+      setLoading(false); // Para o carregamento
     }
   };
 
-  const markAsVisualizada = async (tokenAcess: string) => {
-    try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await await api.get("/visualizada");
-      const data = response.data;
-      if (data) {
-        setOcorrencias(data);
-        const newMarkedDates: any = {};
-        data.forEach((ocorrencia: any) => {
-          newMarkedDates[ocorrencia.data] = {
-            marked: false,
-            dotColor: "red",
-          };
-        });
-        console.log("Notificação foi visualizada.");
-        setMarkedDates(newMarkedDates);
-      }
-    } catch (error) {
-      console.error("Erro ao marcar notificação como visualizada:", error);
-
-  };
-}
-
-  const filterByDate = (date: string) => {
-    setSelectedDate(date);
-    return ocorrencias.filter((ocorrencia) => ocorrencia.data === date);
-  };
-
-  const renderOcorrencia = ({ item }: { item: Notificacao }) => (
-    <View style={styles.ocorrenciaItem}>
-      <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
+  const renderNotificacao = ({ item }: { item: Notificacao }) => (
+    <View style={styles.notificacaoItem}>
+      <Text style={styles.notificacaoTitle}>{item.titulo}</Text>
       <Text>{item.descricao}</Text>
-      <Text>{`Data: ${item.data}`}</Text>
-      <Text>{`Status: ${item.status}`}</Text>
+      <Text>{`Data: ${new Date(item.createdAt).toLocaleDateString("pt-BR")}`}</Text>
+      <Text>{`Destinatário: ${item.tpdestinatario}`}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Calendário */}
-      <CalendarPicker
-        onDateChange={(date: any) => {
-          const selected = moment(date).format("YYYY-MM-DD");
-          filterByDate(selected);
-        }}
-        weekdays={["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]}
-        months={[
-          "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-        ]}
-        todayTextStyle={{ color: "#7CFC00" }}
-        selectedDayColor="green"
-        selectedDayTextColor="white"
-        todayBackgroundColor="green"
-        customDatesStyles={Object.keys(markedDates).map((date) => ({
-          date: moment(date, "YYYY-MM-DD").toDate(),
-          style: { backgroundColor: "red" },
-          textStyle: { color: "white" },
-        }))}
-        previousTitle="Anterior"
-        nextTitle="Próximo"
-      />
-
-      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar ocorrências..."
+        placeholder="Buscar notificações..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
 
-      {/* Lista de Ocorrências */}
-      <FlatList
-        data={ocorrencias.filter(
-          (ocorrencia) =>
-            ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) &&
-            (selectedDate ? ocorrencia.data === selectedDate : true)
-        )}
-        keyExtractor={(item) => item.id}
-        renderItem={renderOcorrencia}
-        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
+      {loading ? (
+        <Text style={styles.loadingText}>Buscando Documentos...</Text>
+      ) : timeoutReached ? (
+        <Text style={styles.noNotificacoes}>Nenhum documento encontrado!</Text>
+      ) : (
+        <FlatList
+          data={notificacoes.filter((notificacao) =>
+            notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
+          )}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNotificacao}
+          ListEmptyComponent={<Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>}
         />
-       </View>
+      )}
+    </View>
   );
 }
 
@@ -156,24 +103,30 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: "#359830",
     borderWidth: 2,
-    borderRadius: 10,
+    borderRadius: 20,
     marginBottom: 20,
     paddingHorizontal: 8,
   },
-  ocorrenciaItem: {
-    backgroundColor: "#f9f9f9",
+  notificacaoItem: {
+    backgroundColor: "#90EE90",
     padding: 15,
-    marginVertical: 5,
-    borderRadius: 8,
+    marginVertical: 10,
+    borderRadius: 10,
   },
-  ocorrenciaTitle: {
+  notificacaoTitle: {
     fontSize: 16,
     fontWeight: "bold",
   },
-  noOcorrencias: {
+  noNotificacoes: {
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 50,
     fontSize: 14,
     color: "#999",
+  },
+  loadingText: {
+    textAlign: "center",
+    marginTop: 50,
+    fontSize: 16,
+    color: "#359830",
   },
 });
