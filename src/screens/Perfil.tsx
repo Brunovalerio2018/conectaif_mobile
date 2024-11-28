@@ -67,43 +67,7 @@ const Perfil = ({ navigation }: any) => {
         console.log('Seleção de imagem cancelada.');
         return;
       }
-      if (response.errorMessage) {import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../app';
-import { launchImageLibrary } from 'react-native-image-picker';
-
-interface StatusDoUsuario {
-  nome: string;
-  email: string;
-  endereco: string;
-  cpf: string;
-  matricula: string;
-  notas: string[];
-  faltas: string[];
-  progressoAcademico: string;
-  curso: string;
-  professor: string;
-}
-
-const Perfil = ({ navigation }: any) => {
-  const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
-  const [imagem, setImagem] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [tokenAcesso, setTokenAcesso] = useState('');
-
-  const token = AsyncStorage.getItem('userToken').then(res => setTokenAcesso(res ?? '-'));
-
-  const buscarInformacoesDoUsuario = async (tokenAcesso: string, idUsuario: number) => {
-    try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
-      const resposta = await api.post('usuarios/busca-um', { id: idUsuario });
-      const dados = await resposta.data;
-      if (dados.id) {
-        setStatusDoUsuario({
-          nome: dados.nome || '',
-          email: dados.email || '',
-
+      if (response.errorMessage) {
         Alert.alert('Erro', response.errorMessage);
         return;
       }
