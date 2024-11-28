@@ -51,15 +51,6 @@ const Perfil = ({ navigation }: any) => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('userToken');
-      navigation.replace('Login');
-    } catch (erro) {
-      console.error('Erro ao fazer logout:', erro);
-      Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
-    }
-  };
 
   const handleImageUpload = () => {
     launchImageLibrary({ mediaType: 'photo', quality: 1 }, async (response) => {
@@ -106,11 +97,7 @@ const Perfil = ({ navigation }: any) => {
     });
   };
 
-  useEffect(() => {
-    if (tokenAcesso) {
-      buscarInformacoesDoUsuario(tokenAcesso, 1);
-    }
-  }, [tokenAcesso]);
+
   
   return (
     <ScrollView style={styles.container}>
