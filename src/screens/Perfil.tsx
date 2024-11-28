@@ -1,4 +1,73 @@
 import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../app';
+import { launchImageLibrary } from 'react-native-image-picker';
+
+interface StatusDoUsuario {
+  nome: string;
+  email: string;
+  endereco: string;
+  cpf: string;
+  matricula: string;
+}
+
+const Perfil = ({ navigation }: any) => {
+
+            const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
+            const [imagem, setImagem] = useState<string | null>(null);
+            const [loading, setLoading] = useState(false);
+            const [tokenAcesso, setTokenAcesso] = useState('');
+
+            useEffect(() => {
+              const fetchToken = async () => {
+                const token = await AsyncStorage.getItem('userToken');
+                setTokenAcesso(token || '');
+              };
+              fetchToken();
+            }, []);
+
+  const buscarInformacoesDoUsuario = async (tokenAcesso: string, idUsuario: number) => {
+    try {
+      api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
+      const resposta = await api.post('usuarios/busca-um', { id: idUsuario });
+      const dados = resposta.data;
+
+      if (dados.id) {
+        setStatusDoUsuario({
+          nome: dados.nome || '',
+          email: dados.email || '',
+          endereco: dados.endereco || '',
+          cpf: dados.cpf || '',
+          matricula: dados.matricula || '',
+        });
+        setImagem(dados.imagemUrl || '');
+      } else {
+        Alert.alert('Erro', 'Erro ao buscar informações do usuário.');
+      }
+    } catch (erro) {
+      console.error('Erro ao buscar informações do usuário:', erro);
+      Alert.alert('Erro', 'Falha ao buscar os dados. Tente novamente mais tarde.');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken');
+      navigation.replace('Login');
+    } catch (erro) {
+      console.error('Erro ao fazer logout:', erro);
+      Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
+    }
+  };
+
+  const handleImageUpload = () => {
+    launchImageLibrary({ mediaType: 'photo', quality: 1 }, async (response) => {
+      if (response.didCancel) {
+        console.log('Seleção de imagem cancelada.');
+        return;
+      }
+      if (response.errorMessage) {import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../app';
@@ -34,81 +103,62 @@ const Perfil = ({ navigation }: any) => {
         setStatusDoUsuario({
           nome: dados.nome || '',
           email: dados.email || '',
-          endereco: dados.endereco || '',
-          cpf: dados.cpf || '',
-          matricula: dados.matricula || '',
-          notas: dados.notas || [],
-          faltas: dados.faltas || [],
-          progressoAcademico: dados.progressoAcademico || '',
-          curso: dados.curso || '',
-          professor: dados.professor || '',
-        });
-        setImagem(dados.imagemUrl || '');
 
-      } else {
-        Alert.alert('Erro', 'Erro ao buscar informações do usuário.');
+        Alert.alert('Erro', response.errorMessage);
+        return;
       }
-    } catch (erro) {
-      console.error('Erro ao buscar informações do usuário:', erro);
-      Alert.alert('Erro', 'Falha ao buscar os dados. Tente novamente mais tarde.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('userToken');
-      navigation.replace('Login');
-    } catch (erro) {
-      console.error('Erro ao fazer logout:', erro);
-      Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
-    }
-  };
+      if (response.assets && response.assets[0]) {
+        const selectedImage = response.assets[0];
+        try {
+          setLoading(true);
 
-  const handleImageUpload = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 1 }, (response) => {
-      if (response.didCancel) {
-        console.log('O usuário cancelou a seleção de imagem.');
-      } else if (response.errorCode) {
-        console.error('Erro ao selecionar a imagem: ', response.errorMessage);
-        Alert.alert('Erro', 'Falha ao selecionar a imagem.');
-      } else {
-        // Envia a imagem para o servidor
+          const imageResponse = await fetch(selectedImage.uri || '');
+          const blob = await imageResponse.blob();
 
-        api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
-        api.post('usuarios/upload-imagem')
-          .then((resposta) => {
-            if (resposta.data.success) {
-              setImagem(resposta.data.imagemUrl); // Supondo que o servidor retorna a URL da imagem salva
-              Alert.alert('Sucesso', 'Imagem de perfil atualizada com sucesso!');
-            } else {
-              Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
-            }
-          })
-          .catch((erro) => {
-            console.error('Erro ao fazer upload da imagem:', erro);
-            Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
+          // Enviar diretamente sem usar FormData
+          api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
+          const uploadResponse = await api.post('usuarios/upload-imagem', {
+            imagem: blob,
+            fileName: selectedImage.fileName,
+            mimeType: selectedImage.type,
+          }, {
+            headers: { 'Content-Type': 'application/json' },
           });
+
+          if (uploadResponse.data.success) {
+            setImagem(uploadResponse.data.imagemUrl);
+            Alert.alert('Sucesso', 'Imagem de perfil atualizada!');
+          } else {
+            Alert.alert('Erro', 'Falha ao atualizar a imagem.');
+          }
+        } catch (erro) {
+          console.error('Erro ao fazer upload da imagem:', erro);
+          Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
 
   useEffect(() => {
     if (tokenAcesso) {
-      buscarInformacoesDoUsuario(tokenAcesso, 13); 
+      buscarInformacoesDoUsuario(tokenAcesso, 1);
     }
   }, [tokenAcesso]);
-
+  
   return (
     <ScrollView style={styles.container}>
       <View style={styles.cabecalhoPerfil}>
         <TouchableOpacity onPress={handleImageUpload}>
-          <Image source={{ uri: imagem || ' ' }} style={styles.imagemPerfil} />
+          <Image
+            source={{ uri: imagem || 'https://via.placeholder.com/100' }}
+            style={styles.imagemPerfil}
+          />
         </TouchableOpacity>
-        <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Não Disponível'}</Text>
+        <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Indisponível'}</Text>
         <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
-        <Text style={styles.detalhesPerfil}>Curso: {statusDoUsuario?.curso || 'Não disponível'}</Text>
       </View>
 
       <View style={styles.secaoContainer}>
@@ -123,21 +173,12 @@ const Perfil = ({ navigation }: any) => {
         </View>
       </View>
 
-      <View style={styles.secaoContainer}>
-        <Text style={styles.tituloSecao}>Acompanhamento Acadêmico</Text>
-        <View style={styles.itemLista}>
-          <Text style={styles.tituloItem}>Progresso Acadêmico:</Text>
-          <Text style={styles.textoItem}>{statusDoUsuario?.progressoAcademico || 'Não disponível'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.secaoContainer}>
-        <Text style={styles.tituloSecao}>Informações de Comunicação</Text>
-        <TouchableOpacity style={styles.botao} onPress={() => Linking.openURL('https://classroom.google.com/')}>
-          <Text style={styles.textoBotao}>Abrir Google Sala de Aula</Text>
+      <View style={styles.botaoContainer}>
+        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://classroom.google.com')}>
+          <Text style={styles.textoBotao}>Sala de Aula</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.botao} onPress={() => Linking.openURL('https://docs.google.com/forms')}>
-          <Text style={styles.textoBotao}>Abrir Formulário Google</Text>
+        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://forms.google.com')}>
+          <Text style={styles.textoBotao}>Google Forms</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -196,13 +237,18 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
-  botao: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-    borderRadius: 5,
-    alignItems: 'center',
+  botaoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 15,
+  },
+  botaoSecundario: {
+    flex: 1,
+    backgroundColor: '#359830',
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    borderRadius: 15,
+    alignItems: 'center',
   },
   textoBotao: {
     color: '#fff',
@@ -210,6 +256,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
 
 export default Perfil;
