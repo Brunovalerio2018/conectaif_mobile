@@ -1,187 +1,179 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Button, TextInput, FlatList, ActivityIndicator } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../app';
+import React, { useState, useEffect } from "react";
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput } from "react-native";
+import CalendarPicker from "react-native-calendar-picker";
+import moment from "moment";
+import "moment/locale/pt-br";
+import api from "../app";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Tipo de dados das notificações
-type Notificacao = {
+interface Notificacao {
   id: string;
   titulo: string;
   descricao: string;
   data: string;
   status: string;
-};
+}
 
-export default function Notificacoes() {
-  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [markedDates, setMarkedDates] = useState<any>({});
-  const [loading, setLoading] = useState<boolean>(false);
+export default function Notificacao() {
 
-  // Função para buscar as notificações da API
-  const fetchNotificacoes = useCallback(async (tokenAcess: string) => {
+    const [ocorrencias, setOcorrencias] = useState<Notificacao[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [tokenAcess, setTokenAcess] = useState<string | null>(null);
+    const [markedDates, setMarkedDates] = useState<any>({});
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+          useEffect(() => {
+            const getToken = async () => {
+              const storedToken = await AsyncStorage.getItem("userToken");
+              setTokenAcess(storedToken);
+            };
+            getToken();
+          }, []);
+
+            useEffect(() => {
+              if (tokenAcess) {
+                fetchOcorrencias(tokenAcess);
+                // Enviar automaticamente a notificação como visualizada
+                markAsVisualizada(tokenAcess);
+              }
+            }, [tokenAcess]);
+
+  const fetchOcorrencias = async (tokenAcess: string) => {
     try {
-      setLoading(true);
       api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get('/notificacao'); 
+      const response = await api.post("/notificacao");
       const data = response.data;
 
       if (data) {
-        setNotificacoes(data.map((notificacao: any) => ({
-          id: notificacao.id,
-          titulo: notificacao.titulo || "",
-          descricao: notificacao.descricao || "",
-          data: notificacao.data || "",
-          status: notificacao.status || "Pendente",
-        })));
-
+        setOcorrencias(data);
         const newMarkedDates: any = {};
-        data.forEach((notificacao: any) => {
-          newMarkedDates[notificacao.data] = {
+        data.forEach((ocorrencia: any) => {
+          newMarkedDates[ocorrencia.data] = {
             marked: true,
-            selected: false,
-            dotColor: 'blue',
-            selectedColor: 'orange',
+            dotColor: "red",
           };
         });
         setMarkedDates(newMarkedDates);
-      } else {
-        console.error("Erro ao buscar notificações:", data.message);
       }
     } catch (error) {
-      console.error("Erro ao buscar notificações:", error);
-    } finally {
-      setLoading(false);
+      console.error("Erro ao buscar ocorrências:", error);
     }
-  }, []);
-
-  // Função para buscar o token na AsyncStorage
-  useEffect(() => {
-    const getToken = async () => {
-      const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcess(storedToken); 
-    };
-
-    getToken();
-  }, []);
-
-  // Quando o token for obtido, buscar as notificações
-  useEffect(() => {
-    if (tokenAcess) {
-      fetchNotificacoes(tokenAcess);
-    } else {
-      console.error("Token não encontrado");
-    }
-  }, [tokenAcess, fetchNotificacoes]);
-
-  // Função para filtrar as notificações conforme a busca
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
   };
 
-  // Função para renderizar os itens da lista de notificações
-  const renderNotificacaoItem = ({ item }: { item: Notificacao }) => (
-    <View style={styles.notificacaoItem}>
-      <Text style={styles.notificacaoTitle}>{item.titulo}</Text>
+  const markAsVisualizada = async (tokenAcess: string) => {
+    try {
+      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
+      const response = await await api.get("/visualizada");
+      const data = response.data;
+      if (data) {
+        setOcorrencias(data);
+        const newMarkedDates: any = {};
+        data.forEach((ocorrencia: any) => {
+          newMarkedDates[ocorrencia.data] = {
+            marked: false,
+            dotColor: "red",
+          };
+        });
+        console.log("Notificação foi visualizada.");
+        setMarkedDates(newMarkedDates);
+      }
+    } catch (error) {
+      console.error("Erro ao marcar notificação como visualizada:", error);
+
+  };
+}
+
+  const filterByDate = (date: string) => {
+    setSelectedDate(date);
+    return ocorrencias.filter((ocorrencia) => ocorrencia.data === date);
+  };
+
+  const renderOcorrencia = ({ item }: { item: Notificacao }) => (
+    <View style={styles.ocorrenciaItem}>
+      <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
       <Text>{item.descricao}</Text>
       <Text>{`Data: ${item.data}`}</Text>
       <Text>{`Status: ${item.status}`}</Text>
-      <Button title="Ver Detalhes" onPress={() => {/* Navegar para tela de detalhes */}} />
     </View>
   );
 
-  // Função para filtrar as notificações pela data selecionada no calendário
-  const filterByDate = (date: string) => {
-    setSelectedDate(date);
-  };
-
   return (
     <View style={styles.container}>
-
-
-      {/* Componente de Calendário */}
-      <Calendar
-        onDayPress={(day: { dateString: string }) => {
-          console.log("Data selecionada:", day.dateString);
-          filterByDate(day.dateString);
+      {/* Calendário */}
+      <CalendarPicker
+        onDateChange={(date: any) => {
+          const selected = moment(date).format("YYYY-MM-DD");
+          filterByDate(selected);
         }}
-        markedDates={markedDates}
-        theme={{
-          selectedDayBackgroundColor: 'orange',
-          selectedDayTextColor: 'white',
-          todayTextColor: 'blue',
-          arrowColor: 'blue',
-          monthTextColor: 'blue',
-          textSectionTitleColor: 'green',
-          textDayFontWeight: 'bold',
-          textDayFontSize: 16,
-          textMonthFontWeight: 'bold',
-          textMonthFontSize: 20,
-        }}
+        weekdays={["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]}
+        months={[
+          "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+          "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+        ]}
+        todayTextStyle={{ color: "#7CFC00" }}
+        selectedDayColor="green"
+        selectedDayTextColor="white"
+        todayBackgroundColor="green"
+        customDatesStyles={Object.keys(markedDates).map((date) => ({
+          date: moment(date, "YYYY-MM-DD").toDate(),
+          style: { backgroundColor: "red" },
+          textStyle: { color: "white" },
+        }))}
+        previousTitle="Anterior"
+        nextTitle="Próximo"
       />
 
-      {/* Campo de busca de notificações */}
+      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar notificação..."
+        placeholder="Buscar ocorrências..."
         value={searchQuery}
-        onChangeText={handleSearch}
-        accessibilityLabel="Campo de busca de notificações"
-        accessibilityHint="Digite para buscar notificações"
+        onChangeText={setSearchQuery}
       />
 
-      {/* Indicador de carregamento */}
-      {loading && <ActivityIndicator size="large" color="#0000ff" />}
-
-      {/* Lista de notificações filtradas */}
+      {/* Lista de Ocorrências */}
       <FlatList
-        data={notificacoes.filter((notificacao) =>
-          notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          (selectedDate ? notificacao.data === selectedDate : true)
+        data={ocorrencias.filter(
+          (ocorrencia) =>
+            ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            (selectedDate ? ocorrencia.data === selectedDate : true)
         )}
         keyExtractor={(item) => item.id}
-        renderItem={renderNotificacaoItem}
-        ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma notificação encontrada</Text>}
-      />
-    </View>
+        renderItem={renderOcorrencia}
+        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
+        />
+       </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
+    backgroundColor: "#fff",
   },
   searchInput: {
     height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
+    borderColor: "#359830",
+    borderWidth: 2,
+    borderRadius: 10,
     marginBottom: 20,
-    paddingLeft: 8,
-    borderRadius: 4,
+    paddingHorizontal: 8,
   },
-  notificacaoItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  ocorrenciaItem: {
+    backgroundColor: "#f9f9f9",
+    padding: 15,
+    marginVertical: 5,
+    borderRadius: 8,
   },
-  notificacaoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  ocorrenciaTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
   },
-  emptyText: {
-    textAlign: 'center',
+  noOcorrencias: {
+    textAlign: "center",
     marginTop: 20,
-    color: 'gray',
+    fontSize: 14,
+    color: "#999",
   },
 });
