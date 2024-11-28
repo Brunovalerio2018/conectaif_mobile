@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 20,
     borderRadius: 30,
-    shadowRadius: 50,
+    shadowRadius: 5,
     elevation: 5,
     justifyContent: 'center',
     marginVertical: -80,
