@@ -4,7 +4,7 @@ import CalendarPicker from 'react-native-calendar-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../app';
 import moment from 'moment';
-import 'moment/locale/pt-br'; // Importando o momento para definir o idioma
+import 'moment/locale/pt-br';
 
 export default function Reunioes() {
   const [reunioes, setReunioes] = useState<any[]>([]);
@@ -63,7 +63,6 @@ export default function Reunioes() {
 
   return (
     <View style={styles.container}>
-      {/* Calendário com dias e meses personalizados */}
       <View style={styles.calendarWrapper}>
         <CalendarPicker
           onDateChange={(date: any) => {
@@ -127,22 +126,23 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   calendarWrapper: {
-    marginBottom: 20,
+    marginBottom: 30,
     elevation: 5, // Para Android
     shadowColor: '#359830',
     shadowOffset: { width: 10, height: 20 },
-    shadowOpacity: 10.20,
+    shadowOpacity: 30.20,
     shadowRadius: 22,
-    borderRadius: 5.10, // Arredondando os cantos para maior realismo
+    borderRadius: 15.10, // Arredondando os cantos para maior realismo
     backgroundColor: 'white',
+    borderColor: '#359830'
   },
   searchInput: {
     height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
+    borderColor: '#359830',
+    borderWidth: 2,
     marginBottom: 20,
-    paddingLeft: 8,
-    borderRadius: 8 ,
+    paddingLeft: 10,
+    borderRadius: 10 ,
   },
   reuniaoItem: {
     padding: 10,
