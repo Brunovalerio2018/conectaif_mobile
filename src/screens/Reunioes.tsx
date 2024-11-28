@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, TextInput, FlatList } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../app';
+import api from '../app';  // Importe o arquivo que configura a API
 import moment from 'moment';
 import 'moment/locale/pt-br';
 
@@ -13,6 +13,7 @@ export default function Reunioes() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [markedDates, setMarkedDates] = useState<any>({});
 
+  // Recupera o token de autenticação do AsyncStorage
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem('userToken');
@@ -21,6 +22,7 @@ export default function Reunioes() {
     getToken();
   }, []);
 
+  // Quando o token for encontrado, busca as reuniões
   useEffect(() => {
     if (tokenAcess) {
       console.log('Token encontrado:', tokenAcess);
@@ -28,14 +30,21 @@ export default function Reunioes() {
     }
   }, [tokenAcess]);
 
+  // Função para buscar as reuniões na API
   const fetchReunioes = async (tokenAcess: string) => {
     try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get(`/reuniao`);
-      const data = response.data;
-
-      if (data) {
+      // Configura o cabeçalho da requisição com o token de autenticação
+      api.defaults.headers.common['Authorization'] = `Bearer ${tokenAcess}`;
+      
+      // Realiza a requisição para buscar as reuniões
+      const response = await api.get('/reuniao');
+      
+      // Verifica se a resposta foi bem-sucedida
+      if (response.status === 200) {
+        const data = response.data;
         setReunioes(data);
+
+        // Marca as datas das reuniões no calendário
         const newMarkedDates: any = {};
         data.forEach((reuniao: any) => {
           newMarkedDates[reuniao.data] = {
@@ -46,16 +55,20 @@ export default function Reunioes() {
           };
         });
         setMarkedDates(newMarkedDates);
+      } else {
+        console.log('Erro ao buscar reuniões: ', response.statusText);
       }
     } catch (error) {
-      console.log('Erro ao buscar reuniões:', error);
+      console.error('Erro ao buscar reuniões:', error);
     }
   };
 
+  // Função para atualizar o campo de busca
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
 
+  // Função para filtrar as reuniões pela data selecionada
   const filterByDate = (date: string) => {
     setSelectedDate(date);
     return reunioes.filter((reuniao: any) => reuniao.data === date);
@@ -63,6 +76,7 @@ export default function Reunioes() {
 
   return (
     <View style={styles.container}>
+      {/* Calendário */}
       <View style={styles.calendarWrapper}>
         <CalendarPicker
           onDateChange={(date: any) => {
@@ -84,8 +98,8 @@ export default function Reunioes() {
             style: { backgroundColor: 'red' },
             textStyle: { color: 'white' },
           }))}
-          previousTitle="Anterior"  // Texto personalizado para o botão de "Anterior"
-          nextTitle="Próximo"       // Texto personalizado para o botão de "Próximo"
+          previousTitle="Anterior"
+          nextTitle="Próximo"
         />
       </View>
 
@@ -127,14 +141,14 @@ const styles = StyleSheet.create({
   },
   calendarWrapper: {
     marginBottom: 30,
-    elevation: 5, // Para Android
+    elevation: 5,
     shadowColor: '#359830',
-    shadowOffset: { width: 10, height: 20 },
+    shadowOffset: { width: 1, height: 20 },
     shadowOpacity: 30.20,
     shadowRadius: 22,
-    borderRadius: 15.10, // Arredondando os cantos para maior realismo
+    borderRadius: 15.10,
     backgroundColor: 'white',
-    borderColor: '#359830'
+    borderColor: '#359830',
   },
   searchInput: {
     height: 40,
@@ -142,7 +156,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     marginBottom: 20,
     paddingLeft: 10,
-    borderRadius: 10 ,
+    borderRadius: 10,
   },
   reuniaoItem: {
     padding: 10,
