@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../app';
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker'; // Importando o ImagePicker do Expo
 
 interface StatusDoUsuario {
+  id: string;
   nome: string;
   email: string;
   endereco: string;
@@ -14,91 +14,60 @@ interface StatusDoUsuario {
 
 const Perfil = ({ navigation }: any) => {
 
-            const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
-            const [imagem, setImagem] = useState<string | null>(null);
-            const [loading, setLoading] = useState(false);
-            const [tokenAcesso, setTokenAcesso] = useState('');
+  const [imagem, setImagem] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('Carregando...');  // Texto para a barra de loading
+  const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
 
-            useEffect(() => {
-              const fetchToken = async () => {
-                const token = await AsyncStorage.getItem('userToken');
-                setTokenAcesso(token || '');
-              };
-              fetchToken();
-            }, []);
+  useEffect(() => {
+    const fetchToken = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
 
-  const buscarInformacoesDoUsuario = async (tokenAcesso: string, idUsuario: number) => {
-    try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
-      const resposta = await api.post('usuarios/busca-um', { id: idUsuario });
-      const dados = resposta.data;
+      const usuario = JSON.parse(dadosUsuario || '{}');
+      console.log('dduser', usuario);
+      setStatusDoUsuario(usuario.userInfo || null);
+    };
+    fetchToken();
+  }, []);
 
-      if (dados.id) {
-        setStatusDoUsuario({
-          nome: dados.nome || '',
-          email: dados.email || '',
-          endereco: dados.endereco || '',
-          cpf: dados.cpf || '',
-          matricula: dados.matricula || '',
-        });
-        setImagem(dados.imagemUrl || '');
-      } else {
-        Alert.alert('Erro', 'Erro ao buscar informações do usuário.');
-      }
-    } catch (erro) {
-      console.error('Erro ao buscar informações do usuário:', erro);
-      Alert.alert('Erro', 'Falha ao buscar os dados. Tente novamente mais tarde.');
+  // Função para abrir a galeria e escolher a imagem
+  const handleImageUpload = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      alert('A permissão para acessar a galeria é necessária!');
+      return;
+    }
+
+    // Opções para abrir a galeria
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaType: ImagePicker.MediaTypeOptions.Photo,
+      quality: 1,
+    });
+
+    if (result.cancelled) {
+      console.log('Seleção de imagem cancelada.');
+      return;
+    }
+
+    if (result.uri) {
+      setLoading(true);  // Começa a exibir o carregamento
+      setLoadingText('Carregando imagem...');  // Ajusta o texto da barra de loading
+      simulateUpload(result.uri); // Função para simular o upload
     }
   };
 
-
-  const handleImageUpload = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 1 }, async (response) => {
-      if (response.didCancel) {
-        console.log('Seleção de imagem cancelada.');
-        return;
-      }
-      if (response.errorMessage) {
-        Alert.alert('Erro', response.errorMessage);
-        return;
-      }
-
-      if (response.assets && response.assets[0]) {
-        const selectedImage = response.assets[0];
-        try {
-          setLoading(true);
-
-          const imageResponse = await fetch(selectedImage.uri || '');
-          const blob = await imageResponse.blob();
-
-          // Enviar diretamente sem usar FormData
-          api.defaults.headers.common.Authorization = `Bearer ${tokenAcesso}`;
-          const uploadResponse = await api.post('usuarios/upload-imagem', {
-            imagem: blob,
-            fileName: selectedImage.fileName,
-            mimeType: selectedImage.type,
-          }, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-
-          if (uploadResponse.data.success) {
-            setImagem(uploadResponse.data.imagemUrl);
-            Alert.alert('Sucesso', 'Imagem de perfil atualizada!');
-          } else {
-            Alert.alert('Erro', 'Falha ao atualizar a imagem.');
-          }
-        } catch (erro) {
-          console.error('Erro ao fazer upload da imagem:', erro);
-          Alert.alert('Erro', 'Falha ao fazer upload da imagem.');
-        } finally {
-          setLoading(false);
-        }
-      }
-    });
+  // Função para simular o upload da imagem (com delay)
+  const simulateUpload = (uri: string) => {
+    // Simulando um delay de 5 segundos para o upload
+    setTimeout(() => {
+      setImagem(uri);  // Atualiza a imagem no perfil
+      setLoading(false);  // Finaliza o carregamento
+      setLoadingText('Imagem carregada com sucesso!'); // Mensagem após o carregamento
+    }, 5000);  // 5 segundos de delay para simular o upload
   };
 
-
-  
   return (
     <ScrollView style={styles.container}>
       <View style={styles.cabecalhoPerfil}>
@@ -111,6 +80,14 @@ const Perfil = ({ navigation }: any) => {
         <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Indisponível'}</Text>
         <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
       </View>
+
+      {/* Barra de Loading */}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00ff00" />
+          <Text style={styles.loadingText}>{loadingText}</Text>
+        </View>
+      )}
 
       <View style={styles.secaoContainer}>
         <Text style={styles.tituloSecao}>Dados Pessoais</Text>
@@ -161,6 +138,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: '#555',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#555',
+    marginTop: 10,
   },
   secaoContainer: {
     marginBottom: 10,
