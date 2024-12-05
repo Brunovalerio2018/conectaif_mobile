@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Animated, StyleSheet, Alert } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Importação para ícones de visibilidade
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Checkbox from 'expo-checkbox'; // Biblioteca para o checkbox
 
 import api from '../../app';
 
@@ -50,11 +51,12 @@ const LoginHome = () => {
 
     try {
       const retorno = await api.post('autorizacao/login', { login: usuario, senha: senha });
-      const token = retorno?.data?.access_token;
-      console.log(retorno?.data)
+      const {access_token,...dadosUsuario} = retorno?.data;
+      
 
-      if (token) {
-        await AsyncStorage.setItem('userToken', token);
+      if (access_token) {
+        await AsyncStorage.setItem('userToken', access_token);
+        await AsyncStorage.setItem('dadosUsuario',JSON.stringify( dadosUsuario))
         if (salvarUsuario) {
           await AsyncStorage.setItem('savedUsername', usuario);
           await AsyncStorage.setItem('savedPassword', senha);
@@ -114,6 +116,16 @@ const LoginHome = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Checkbox para salvar as credenciais */}
+      <View style={styles.checkboxContainer}>
+        <Checkbox
+          value={salvarUsuario}
+          onValueChange={setSalvarUsuario}
+          color={salvarUsuario ? '#359830' : undefined}
+        />
+        <Text style={styles.checkboxLabel}>Salvar usuário e senha</Text>
+      </View>
+
       {/* Adicionado o botão para recuperação de senha */}
       <TouchableOpacity onPress={handleRecuperarSenha}>
         <Text style={styles.optionText}>
@@ -132,7 +144,6 @@ const LoginHome = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -145,9 +156,9 @@ const styles = StyleSheet.create({
     marginBottom: -30,
   },
   logo: {
-    width: 1000,
-    height: 450,
-    marginVertical: -40
+    width: 600,
+    height: 550,
+    marginVertical: -90,
   },
   title: {
     fontSize: 18,
@@ -192,18 +203,22 @@ const styles = StyleSheet.create({
     marginVertical: 20
   },
   checkboxContainer: {
-    marginVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 55,
+    marginTop: -39
   },
   checkboxLabel: {
+    marginLeft: 8,
+    fontSize: 16,
     color: '#333',
-    fontSize: 14,
   },
   neonButton: {
     backgroundColor: '#359830',
     paddingVertical: 2,
     paddingHorizontal: 20,
     borderRadius: 30,
-    shadowRadius: 5,
+    shadowRadius: 50,
     elevation: 5,
     justifyContent: 'center',
     marginVertical: -80,
@@ -247,11 +262,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     marginLeft: 10,
   },
+
 });
 
 export default LoginHome;
-
-
-
-
-
