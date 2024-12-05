@@ -1,73 +1,65 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, FlatList, TextInput, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, FlatList, TextInput } from "react-native";
+import CalendarPicker from "react-native-calendar-picker";
+import moment from "moment";
+import "moment/locale/pt-br";
 import api from "../app";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface Notificacao {
-  id: string;
+interface NotificaUser {
   titulo: string;
   descricao: string;
-  createdAt: string;
+  idusuario: number;
   tpdestinatario: string;
 }
 
-export default function Notificacoes() {
-  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
+export default function Notificacao() {
+  const [notificacoes, setNotificacoes] = useState<NotificaUser[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false); // Estado para controle de carregamento
-  const [timeoutReached, setTimeoutReached] = useState<boolean>(false); // Estado para controle do timeout
+  const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
 
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcess(storedToken);
+      setTokenAcesso(storedToken);
     };
     getToken();
   }, []);
 
   useEffect(() => {
-    if (tokenAcess) {
-      fetchNotificacoes(tokenAcess);
+    if (tokenAcesso) {
+      fetchNotificacoes(tokenAcesso);
     }
-  }, [tokenAcess]);
+  }, [tokenAcesso]);
 
-  // Função para buscar notificações
-  const fetchNotificacoes = async (tokenAcess: string) => {
-    setLoading(true); // Começa o carregamento
-    setTimeoutReached(false); // Resetando o timeout
-
-    const timer = setTimeout(() => {
-      setLoading(false);
-      setTimeoutReached(true); // Se passar de 10 segundos, exibe a mensagem de "Nenhum documento encontrado!"
-    }, 10000); // 10 segundos
-
+  const fetchNotificacoes = async (token: string) => {
     try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
       const response = await api.get("/notificacao");
+      const data = response.data;
 
-      if (response.status === 200) {
-        setNotificacoes(response.data);
+      if (data) {
+        setNotificacoes(data);
       }
     } catch (error) {
       console.error("Erro ao buscar notificações:", error);
-    } finally {
-      clearTimeout(timer); // Limpa o timer caso a busca termine antes de 10 segundos
-      setLoading(false); // Para o carregamento
     }
   };
 
-  const renderNotificacao = ({ item }: { item: Notificacao }) => (
+  const renderNotificacao = ({ item }: { item: NotificaUser }) => (
     <View style={styles.notificacaoItem}>
-      <Text style={styles.notificacaoTitle}>{item.titulo}</Text>
+      <Text style={styles.notificacaoTitulo}>{item.titulo}</Text>
       <Text>{item.descricao}</Text>
-      <Text>{`Data: ${new Date(item.createdAt).toLocaleDateString("pt-BR")}`}</Text>
-      <Text>{`Destinatário: ${item.tpdestinatario}`}</Text>
+      <Text>{`Descricao notificacao: ${item.titulo}`}</Text>
+      <Text>{`descricao: ${item.descricao}`}</Text>
+ 
+      
     </View>
   );
 
   return (
     <View style={styles.container}>
+      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar notificações..."
@@ -75,20 +67,17 @@ export default function Notificacoes() {
         onChangeText={setSearchQuery}
       />
 
-      {loading ? (
-        <Text style={styles.loadingText}>Buscando Documentos...</Text>
-      ) : timeoutReached ? (
-        <Text style={styles.noNotificacoes}>Nenhum documento encontrado!</Text>
-      ) : (
-        <FlatList
-          data={notificacoes.filter((notificacao) =>
-            notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
-          )}
-          keyExtractor={(item) => item.id}
-          renderItem={renderNotificacao}
-          ListEmptyComponent={<Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>}
-        />
-      )}
+
+      <FlatList
+        data={notificacoes.filter((notificacao) =>
+          notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
+        )}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderNotificacao}
+        ListEmptyComponent={
+          <Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>
+        }
+      />
     </View>
   );
 }
@@ -103,30 +92,24 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: "#359830",
     borderWidth: 2,
-    borderRadius: 20,
+    borderRadius: 10,
     marginBottom: 20,
     paddingHorizontal: 8,
   },
   notificacaoItem: {
-    backgroundColor: "#90EE90",
+    backgroundColor: "#ADFF2F",
     padding: 15,
-    marginVertical: 10,
-    borderRadius: 10,
+    marginVertical: 5,
+    borderRadius: 8,
   },
-  notificacaoTitle: {
+  notificacaoTitulo: {
     fontSize: 16,
     fontWeight: "bold",
   },
   noNotificacoes: {
     textAlign: "center",
-    marginTop: 50,
+    marginTop: 20,
     fontSize: 14,
     color: "#999",
-  },
-  loadingText: {
-    textAlign: "center",
-    marginTop: 50,
-    fontSize: 16,
-    color: "#359830",
   },
 });
