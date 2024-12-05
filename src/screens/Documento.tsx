@@ -2,39 +2,39 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Button, FlatList, StyleSheet, TextInput, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../app";
-import * as DocumentPicker from "expo-document-picker";
 
-interface Documento {
+interface DocNotifica {
   id: string;
   titulo: string;
-  categoria: string;
-  url: string;
+  arquivo: string;
+  idservidor: number;
+  idnotificacao: number;
 }
 
-const Documentos = () => {
-  const [documentos, setDocumentos] = useState<Documento[]>([]);
+const DocumentosNotificacao = () => {
+  const [documentos, setDocumentos] = useState<DocNotifica[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
+  const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
 
   // Busca o token do usuário ao carregar o componente
   useEffect(() => {
     const getToken = async () => {
       const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcess(storedToken);
+      setTokenAcesso(storedToken);
     };
     getToken();
   }, []);
 
-  // Faz a requisição para buscar documentos se o token estiver disponível
+  // Faz a requisição para buscar documentos de notificações
   useEffect(() => {
-    if (tokenAcess) {
-      fetchDocumentos(tokenAcess);
+    if (tokenAcesso) {
+      fetchDocumentos(tokenAcesso);
     }
-  }, [tokenAcess]);
+  }, [tokenAcesso]);
 
-  const fetchDocumentos = async (tokenAcess: string) => {
+  const fetchDocumentos = async (token: string) => {
     try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
       const response = await api.get("/documento/buscar-todos");
       const data = response.data;
 
@@ -60,15 +60,12 @@ const Documentos = () => {
     }
   };
 
- 
-
   return (
     <View style={styles.container}>
-
       {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar documentos..."
+        placeholder="Buscar documentos de notificações..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -82,7 +79,8 @@ const Documentos = () => {
         renderItem={({ item }) => (
           <View style={styles.documentItem}>
             <Text style={styles.documentTitle}>{item.titulo}</Text>
-            <Text>{`Categoria: ${item.categoria}`}</Text>
+            <Text>{`titulo: ${item.titulo}`}</Text>
+            <Text>{`Arquivo: ${item.arquivo}`}</Text>
             <Button title="Download" onPress={() => handleDownload(item.id)} />
           </View>
         )}
@@ -99,11 +97,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10,
   },
   searchInput: {
     padding: 10,
@@ -135,4 +128,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Documentos;
+export default DocumentosNotificacao;
