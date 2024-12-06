@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker'; // Importando o ImagePicker do Expo
+import * as ImagePicker from 'expo-image-picker';
 
 interface StatusDoUsuario {
   id: string;
@@ -13,67 +13,72 @@ interface StatusDoUsuario {
 }
 
 const Perfil = ({ navigation }: any) => {
-
   const [imagem, setImagem] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('Carregando...');  // Texto para a barra de loading
+  const [loadingText, setLoadingText] = useState('Carregando...');
   const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
 
-  useEffect(() => {
-    const fetchToken = async () => {
-      const token = await AsyncStorage.getItem('userToken');
-      const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
-
-      const usuario = JSON.parse(dadosUsuario || '{}');
-      console.log('dduser', usuario);
-      setStatusDoUsuario(usuario.userInfo || null);
-    };
-    fetchToken();
-  }, []);
+  // Função para verificar e solicitar permissões
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permissão necessária', 'A permissão para acessar a galeria é necessária!');
+      return false;
+    }
+    return true;
+  };
 
   // Função para abrir a galeria e escolher a imagem
   const handleImageUpload = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
 
-    if (permissionResult.granted === false) {
-      alert('A permissão para acessar a galeria é necessária!');
-      return;
-    }
-
-    // Opções para abrir a galeria
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaType: ImagePicker.MediaTypeOptions.Photo,
       quality: 1,
     });
 
-    if (result.cancelled) {
+    if (result.canceled) {
       console.log('Seleção de imagem cancelada.');
       return;
     }
 
-    if (result.uri) {
-      setLoading(true);  // Começa a exibir o carregamento
-      setLoadingText('Carregando imagem...');  // Ajusta o texto da barra de loading
-      simulateUpload(result.uri); // Função para simular o upload
+    if (result.assets && result.assets.length > 0) {
+      const selectedImage = result.assets[0].uri;
+      setLoading(true);
+      setLoadingText('Carregando imagem...');
+      setImagem(selectedImage);  // Atualizando o estado com a imagem escolhida
+      setLoading(false);
+      setLoadingText('Imagem carregada com sucesso!');
+      
+      // Salvar a imagem no AsyncStorage
+      await AsyncStorage.setItem('profileImage', selectedImage);
     }
   };
 
-  // Função para simular o upload da imagem (com delay)
-  const simulateUpload = (uri: string) => {
-    // Simulando um delay de 5 segundos para o upload
-    setTimeout(() => {
-      setImagem(uri);  // Atualiza a imagem no perfil
-      setLoading(false);  // Finaliza o carregamento
-      setLoadingText('Imagem carregada com sucesso!'); // Mensagem após o carregamento
-    }, 5000);  // 5 segundos de delay para simular o upload
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
+      const usuario = JSON.parse(dadosUsuario || '{}');
+      console.log('dduser', usuario);
+      setStatusDoUsuario(usuario.userInfo || null);
+
+      // Carregar a imagem salva do AsyncStorage
+      const savedImage = await AsyncStorage.getItem('profileImage');
+      if (savedImage) {
+        setImagem(savedImage); // Atualizar o estado com a imagem salva
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.cabecalhoPerfil}>
         <TouchableOpacity onPress={handleImageUpload}>
           <Image
-            source={{ uri: imagem || 'https://via.placeholder.com/100' }}
+            source={{ uri: imagem || 'https://via.placeholder.com/100' }} // Exibindo a imagem ou a imagem padrão
             style={styles.imagemPerfil}
           />
         </TouchableOpacity>
