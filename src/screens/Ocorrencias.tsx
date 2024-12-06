@@ -1,82 +1,91 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, FlatList, TextInput } from "react-native";
-import CalendarPicker from "react-native-calendar-picker";
-import moment from "moment";
-import "moment/locale/pt-br";
+import { StyleSheet, Text, View, FlatList, TextInput, Alert } from "react-native";
 import api from "../app";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface NotificaUser {
+interface Ocorrencia {
+  id: string;
   titulo: string;
   descricao: string;
-  idusuario: number;
-  tpdestinatario: string;
+  data: string;
+  status: string;
 }
 
-export default function Notificacao() {
-  const [notificacoes, setNotificacoes] = useState<NotificaUser[]>([]);
+export default function Ocorrencias() {
+  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
 
   useEffect(() => {
     const getToken = async () => {
-      const storedToken = await AsyncStorage.getItem("userToken");
-      setTokenAcesso(storedToken);
+      try {
+        const storedToken = await AsyncStorage.getItem("userToken");
+        setTokenAcesso(storedToken);
+      } catch (error) {
+        console.error("Erro ao buscar o token:", error);
+      }
     };
+
     getToken();
   }, []);
 
   useEffect(() => {
     if (tokenAcesso) {
-      fetchNotificacoes(tokenAcesso);
+      fetchOcorrencias(tokenAcesso);
     }
   }, [tokenAcesso]);
 
-  const fetchNotificacoes = async (token: string) => {
+  const fetchOcorrencias = async (token: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      const response = await api.get("/notificacao");
-      const data = response.data;
+      const response = await api.get("/ocorrencia");
 
-      if (data) {
-        setNotificacoes(data);
+      if (response.status === 200) {
+        const data = response.data;
+        setOcorrencias(
+          data.map((ocorrencia: any) => ({
+            id: ocorrencia.id,
+            titulo: ocorrencia.titulo || "Sem título",
+            descricao: ocorrencia.descricao || "Sem descrição",
+            data: ocorrencia.data || "Data não disponível",
+            status: ocorrencia.status || "pendente",
+          }))
+        );
+      } else {
+        Alert.alert("Erro", "Não foi possível carregar as ocorrências.");
       }
     } catch (error) {
-      console.error("Erro ao buscar notificações:", error);
+      console.error("Erro ao buscar ocorrências:", error);
+      Alert.alert("Erro", "Ocorreu um problema ao buscar as ocorrências.");
     }
   };
 
-  const renderNotificacao = ({ item }: { item: NotificaUser }) => (
-    <View style={styles.notificacaoItem}>
-      <Text style={styles.notificacaoTitulo}>{item.titulo}</Text>
-      <Text>{item.descricao}</Text>
-      <Text>{`Descricao notificacao: ${item.titulo}`}</Text>
-      <Text>{`descricao: ${item.descricao}`}</Text>
- 
-      
+  const renderOcorrencia = ({ item }: { item: Ocorrencia }) => (
+    <View style={styles.ocorrenciaItem}>
+      <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
+      <Text style={styles.ocorrenciaDescription}>{item.descricao}</Text>
+      <Text style={styles.ocorrenciaDate}>{item.data}</Text>
+      <Text style={styles.ocorrenciaStatus}>{item.status}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar notificações..."
+        placeholder="Buscar ocorrências..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
-
-
       <FlatList
-        data={notificacoes.filter((notificacao) =>
-          notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
+        data={ocorrencias.filter(
+          (ocorrencia) =>
+            ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            ocorrencia.descricao.toLowerCase().includes(searchQuery.toLowerCase())
         )}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={renderNotificacao}
-        ListEmptyComponent={
-          <Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>
-        }
+        renderItem={renderOcorrencia}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
       />
     </View>
   );
@@ -85,31 +94,48 @@ export default function Notificacao() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: "#fff",
+    alignItems: "center",
+    paddingTop: 40,
   },
   searchInput: {
-    height: 40,
-    borderColor: "#359830",
-    borderWidth: 2,
-    borderRadius: 10,
+    width: "90%",
+    padding: 10,
     marginBottom: 20,
-    paddingHorizontal: 8,
+    backgroundColor: "#f1f1f1",
+    borderRadius: 5,
+    fontSize: 16,
   },
-  notificacaoItem: {
-    backgroundColor: "#ADFF2F",
+  ocorrenciaItem: {
+    backgroundColor: "#f9f9f9",
     padding: 15,
     marginVertical: 5,
     borderRadius: 8,
   },
-  notificacaoTitulo: {
+  ocorrenciaTitle: {
     fontSize: 16,
     fontWeight: "bold",
+    color: "#333",
   },
-  noNotificacoes: {
-    textAlign: "center",
-    marginTop: 20,
+  ocorrenciaDescription: {
     fontSize: 14,
-    color: "#999",
+    color: "#666",
+    marginTop: 5,
+  },
+  ocorrenciaDate: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 5,
+  },
+  ocorrenciaStatus: {
+    fontSize: 14,
+    color: "#4CAF50",
+    marginTop: 5,
+  },
+  noOcorrencias: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 20,
+    textAlign: "center",
   },
 });
