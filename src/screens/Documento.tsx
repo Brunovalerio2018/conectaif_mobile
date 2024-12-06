@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, FlatList, StyleSheet, TextInput, Alert } from "react-native";
+import { View, Text, Button, FlatList, StyleSheet, TextInput, Alert, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../app";
+import api from "../app"; // Certifique-se de que o axios tenha o baseURL configurado corretamente.
 
 interface DocNotifica {
   id: string;
@@ -11,10 +11,11 @@ interface DocNotifica {
   idnotificacao: number;
 }
 
-const DocumentosNotificacao = () => {
+const Documento = () => {
   const [documentos, setDocumentos] = useState<DocNotifica[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Busca o token do usuário ao carregar o componente
   useEffect(() => {
@@ -33,17 +34,22 @@ const DocumentosNotificacao = () => {
   }, [tokenAcesso]);
 
   const fetchDocumentos = async (token: string) => {
+    setIsLoading(true); // Inicia o carregamento
     try {
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
       const response = await api.get("/documento/buscar-todos");
       const data = response.data;
 
-      if (data) {
+      if (data && data.length > 0) {
         setDocumentos(data);
+      } else {
+        Alert.alert("Nenhum documento disponível", "Não há documentos de notificação disponíveis.");
       }
     } catch (error) {
       console.error("Erro ao buscar documentos:", error);
       Alert.alert("Erro", "Não foi possível carregar os documentos.");
+    } finally {
+      setIsLoading(false); // Finaliza o carregamento
     }
   };
 
@@ -70,24 +76,28 @@ const DocumentosNotificacao = () => {
         onChangeText={setSearchQuery}
       />
 
-      {/* Lista de documentos */}
-      <FlatList
-        data={documentos.filter((doc) =>
-          doc.titulo.toLowerCase().includes(searchQuery.toLowerCase())
-        )}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.documentItem}>
-            <Text style={styles.documentTitle}>{item.titulo}</Text>
-            <Text>{`titulo: ${item.titulo}`}</Text>
-            <Text>{`Arquivo: ${item.arquivo}`}</Text>
-            <Button title="Download" onPress={() => handleDownload(item.id)} />
-          </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.noDocuments}>Nenhum documento encontrado</Text>
-        }
-      />
+      {/* Indicador de carregamento */}
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
+      ) : (
+        <FlatList
+          data={documentos.filter((doc) =>
+            doc.titulo.toLowerCase().includes(searchQuery.toLowerCase())
+          )}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.documentItem}>
+              <Text style={styles.documentTitle}>{item.titulo}</Text>
+              <Text>{`Título: ${item.titulo}`}</Text>
+              <Text>{`Arquivo: ${item.arquivo}`}</Text>
+              <Button title="Download" onPress={() => handleDownload(item.id)} />
+            </View>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.noDocuments}>Nenhum documento encontrado</Text>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -126,6 +136,9 @@ const styles = StyleSheet.create({
     color: "#999",
     marginTop: 20,
   },
+  loader: {
+    marginTop: 20,
+  },
 });
 
-export default DocumentosNotificacao;
+export default Documento;
