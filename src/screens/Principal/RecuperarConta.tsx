@@ -25,14 +25,28 @@ const RecuperarConta = () => {
 
     try {
       setLoading(true);
+      
+      // Envia os dados para o backend para recuperação
       const resposta = await api.post('/recuperar-conta', {
         opcao: opcaoSelecionada,
         matriculaCpf,
       });
 
+
       if (resposta.data.success) {
-        Alert.alert('Sucesso', 'As instruções para recuperação foram enviadas.');
-        navigation.navigate('LoginHome');
+        const emailResponse = await api.post('/email', {
+          destinatario: resposta.data.email, 
+          assunto: 'Instruções para recuperação de conta',
+          conteudo: 'Aqui estão as instruções para recuperar sua conta...',
+          anexos: '' 
+        });
+
+        if (emailResponse.status === 200) {
+          Alert.alert('Sucesso', 'As instruções para recuperação foram enviadas.');
+          navigation.navigate('LoginHome');
+        } else {
+          Alert.alert('Erro', 'Falha ao enviar o e-mail.');
+        }
       } else {
         Alert.alert('Erro', resposta.data.message || 'Erro ao processar a recuperação.');
       }
@@ -60,41 +74,38 @@ const RecuperarConta = () => {
 
       <Text style={styles.title}>Recuperar Conta</Text>
 
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Digite sua matrícula ou CPF:</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Matrícula ou CPF"
+          value={matriculaCpf}
+          onChangeText={setMatriculaCpf}
+        />
 
-  
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Digite sua matrícula ou CPF:</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Matrícula ou CPF"
-            value={matriculaCpf}
-            onChangeText={setMatriculaCpf}
-          />
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.neonButton}
+            onPress={handleAvancar}
+            activeOpacity={0.8}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Avançar</Text>
+            )}
+          </TouchableOpacity>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.neonButton}
-              onPress={handleAvancar}
-              activeOpacity={0.8}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Avançar</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.voltarButton}
-              onPress={handleVoltar}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.voltarButtonText}>Voltar</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.voltarButton}
+            onPress={handleVoltar}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.voltarButtonText}>Voltar</Text>
+          </TouchableOpacity>
         </View>
-      
+      </View>
     </View>
   );
 };
@@ -119,30 +130,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     color: '#000',
-  },
-  optionsContainer: {
-    marginBottom: 0,
-    marginVertical: 0,
-    alignItems: 'center',
-  },
-  optionButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 20,
-    backgroundColor: '#eaeaea',
-    width: '80%',
-    alignItems: 'center',
-  },
-  selectedOption: {
-    borderColor: '#007bff',
-    backgroundColor: '#d4e6f1',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333',
-    borderRadius: 40,
   },
   inputContainer: {
     marginTop: 20,
