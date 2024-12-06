@@ -6,9 +6,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Perfil from "../screens/Perfil";
 import Ocorrencias from "../screens/Ocorrencias";
 import Reunioes from "../screens/Reunioes";
-import Documentos from "../screens/Documento";
 import Notificacoes from "../screens/Notificacoes";
 import { useNavigation } from "@react-navigation/native";
+import Documento from "../screens/Documento";
 
 const colors = {
   primaryGreen: '#359830',
@@ -31,14 +31,14 @@ export default function DrawerRoutes() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      setTimeout(async () => {
-        await AsyncStorage.removeItem('userToken');
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
+      await AsyncStorage.removeItem('userToken');
+      
+      // Redireciona para a tela de login
+      setTimeout(() => {
+        navigation.navigate('Login');
         setIsLoggingOut(false);
-      }, 5000);
+      }, 3000); // Atraso de 3 segundos
+
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
@@ -57,9 +57,8 @@ export default function DrawerRoutes() {
         drawerInactiveTintColor: colors.white,
         drawerStyle: {
           backgroundColor: colors.primaryGreen,
-          width: 240,
+          width: 215,
         },
-        drawerItemStyle: { marginVertical: 8 },
       }}
     >
       <Drawer.Screen
@@ -85,13 +84,13 @@ export default function DrawerRoutes() {
       />
       <Drawer.Screen
         name="Documentos"
-        component={Documentos}
+        component={Documento}
         options={{
           drawerIcon: ({ color }) => DrawerIcon("file-text", color),
         }}
       />
       <Drawer.Screen
-        name="Notificaes"
+        name="Notificação"
         component={Notificacoes}
         options={{
           drawerIcon: ({ color }) => DrawerIcon("bell", color),
@@ -105,7 +104,7 @@ export default function DrawerRoutes() {
             <TouchableOpacity style={styles.logoutContainer} onPress={handleLogout}>
               {isLoggingOut ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={colors.white} />
+                  <View style={styles.spinner}></View>
                   <Text style={styles.loadingText}>Saindo...</Text>
                 </View>
               ) : (
@@ -119,21 +118,6 @@ export default function DrawerRoutes() {
           drawerIcon: () => null,
         }}
       />
-      <Drawer.Screen
-        name="LogoFooter"
-        component={() => null}
-        options={{
-          drawerLabel: () => (
-            <View style={styles.footerContainer}>
-              <Image
-                source={require('../../assets/logoConectaIF_branco.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
-          ),
-        }}
-      />
     </Drawer.Navigator>
   );
 }
@@ -144,7 +128,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 10,
-    backgroundColor: colors.primaryGreen,
     borderRadius: 8,
     marginHorizontal: 10,
   },
@@ -155,7 +138,7 @@ const styles = StyleSheet.create({
   logoutText: {
     marginLeft: 10,
     fontSize: 16,
-    color: colors.white,
+    color: colors.activeRed,
     fontWeight: 'bold',
   },
   logoutLogo: {
@@ -169,15 +152,28 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginLeft: 20,
-    color: colors.primaryGreen,
-    fontSize: 14,
+    color: colors.white,
+    fontSize: 18,
+  },
+  spinner: {
+    width: 24,
+    height: 24,
+    borderWidth: 3,
+    borderColor: colors.primaryGreen,
+    borderTopColor: '#98FB98',
+    borderRadius: 50,
+    animation: 'spin 1s linear infinite',
   },
   footerContainer: {
-    alignItems: 'center',
-    marginTop: 20,
+    alignItems: 'center', // Centraliza o logo horizontalmente
+    justifyContent: 'center', // Alinha o logo no centro verticalmente
+    marginTop: 150, // Adiciona espaço superior
+    marginBottom: 20, // Adiciona espaço inferior
   },
   logo: {
-    width: 220,
-    height: 650,
+    width: 250, // Ajusta o tamanho da largura do logo
+    height: 300,  // Ajusta o tamanho da altura do logo
+    resizeMode: 'contain', // Garante que a imagem se ajuste sem cortar
+    marginHorizontal: 10, // Adiciona espaço nas laterais
   },
 });
