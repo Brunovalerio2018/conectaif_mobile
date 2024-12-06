@@ -1,122 +1,83 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, Alert } from "react-native";
-import api from "../app"; 
+import { StyleSheet, Text, View, FlatList, TextInput } from "react-native";
+import CalendarPicker from "react-native-calendar-picker";
+import moment from "moment";
+import "moment/locale/pt-br";
+import api from "../app";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface Ocorrencia {
-  id: string;
+interface NotificaUser {
   titulo: string;
   descricao: string;
-  data: string;
-  status: string;
+  idusuario: number;
+  tpdestinatario: string;
 }
 
-export default function Ocorrencias() {
-  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+export default function Notificacao() {
+  const [notificacoes, setNotificacoes] = useState<NotificaUser[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
-  const [novaOcorrencia, setNovaOcorrencia] = useState({ tipo: "", titulo: "", descricao: "" });
+  const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
 
   useEffect(() => {
     const getToken = async () => {
-      try {
-        const storedToken = await AsyncStorage.getItem("userToken");
-        if (storedToken) {
-          setTokenAcess(storedToken);
-        } else {
-          Alert.alert("Erro", "Token não encontrado. Por favor, faça login novamente.");
-        }
-      } catch (error) {
-        console.log("Erro ao buscar o token:", error);
-      }
+      const storedToken = await AsyncStorage.getItem("userToken");
+      setTokenAcesso(storedToken);
     };
-
     getToken();
   }, []);
 
   useEffect(() => {
-    if (tokenAcess) {
-      fetchOcorrencias();
+    if (tokenAcesso) {
+      fetchNotificacoes(tokenAcesso);
     }
-  }, [tokenAcess]);
+  }, [tokenAcesso]);
 
-  const fetchOcorrencias = async () => {
-    if (!tokenAcess) return;
-
+  const fetchNotificacoes = async (token: string) => {
     try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.get("/ocorrencia");
-      if (response.status === 200) {
-        const data = response.data;
-        setOcorrencias(
-          data.map((ocorrencia: any) => ({
-            id: ocorrencia.id,
-            titulo: ocorrencia.titulo || "Sem título",
-            descricao: ocorrencia.descricao || "Sem descrição",
-            data: ocorrencia.data || "Data não disponível",
-            status: ocorrencia.status || "pendente",
-          }))
-        );
-      } else {
-        Alert.alert("Erro", "Não foi possível carregar as ocorrências.");
-      }
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        Alert.alert("Sessão Expirada", "Por favor, faça login novamente.");
-      } else {
-        Alert.alert("Erro", "Ocorreu um problema ao buscar as ocorrências.");
-      }
-    }
-  };
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      const response = await api.get("/notificacao");
+      const data = response.data;
 
-  const criarOcorrencia = async () => {
-    if (!tokenAcess) return;
-
-    try {
-      api.defaults.headers.common.Authorization = `Bearer ${tokenAcess}`;
-      const response = await api.post("/ocorrencia/novo", novaOcorrencia);
-
-      if (response.status === 201) {
-        Alert.alert("Sucesso", "Ocorrência criada com sucesso.");
-        fetchOcorrencias(); // Atualiza a lista
-        setNovaOcorrencia({ tipo: "", titulo: "", descricao: "" }); // Limpa o formulário
-      } else {
-        Alert.alert("Erro", "Não foi possível criar a ocorrência.");
+      if (data) {
+        setNotificacoes(data);
       }
     } catch (error) {
-      console.log("Erro ao criar ocorrência:", error);
-      Alert.alert("Erro", "Ocorreu um problema ao criar a ocorrência.");
+      console.error("Erro ao buscar notificações:", error);
     }
   };
 
-  const renderOcorrencia = ({ item }: { item: Ocorrencia }) => (
-    <View style={styles.ocorrenciaItem}>
-      <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
-      <Text style={styles.ocorrenciaDescription}>{item.descricao}</Text>
-      <Text style={styles.ocorrenciaDate}>{item.data}</Text>
-      <Text style={styles.ocorrenciaStatus}>{item.status}</Text>
+  const renderNotificacao = ({ item }: { item: NotificaUser }) => (
+    <View style={styles.notificacaoItem}>
+      <Text style={styles.notificacaoTitulo}>{item.titulo}</Text>
+      <Text>{item.descricao}</Text>
+      <Text>{`Descricao notificacao: ${item.titulo}`}</Text>
+      <Text>{`descricao: ${item.descricao}`}</Text>
+ 
+      
     </View>
   );
 
   return (
     <View style={styles.container}>
+      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar ocorrências..."
+        placeholder="Buscar notificações..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
+
+
       <FlatList
-        data={ocorrencias.filter(
-          (ocorrencia) =>
-            ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            ocorrencia.descricao.toLowerCase().includes(searchQuery.toLowerCase())
+        data={notificacoes.filter((notificacao) =>
+          notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
         )}
-        renderItem={renderOcorrencia}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={renderNotificacao}
+        ListEmptyComponent={
+          <Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>
+        }
       />
-     
     </View>
   );
 }
@@ -124,69 +85,31 @@ export default function Ocorrencias() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
     backgroundColor: "#fff",
-    alignItems: "center",
-    paddingTop: 40,
   },
   searchInput: {
-    width: "90%",
-    padding: 10,
+    height: 40,
+    borderColor: "#359830",
+    borderWidth: 2,
+    borderRadius: 10,
     marginBottom: 20,
-    backgroundColor: "#f1f1f1",
-    borderRadius: 5,
-    fontSize: 16,
+    paddingHorizontal: 8,
   },
-  ocorrenciaItem: {
-    backgroundColor: "#f9f9f9",
+  notificacaoItem: {
+    backgroundColor: "#ADFF2F",
     padding: 15,
     marginVertical: 5,
     borderRadius: 8,
   },
-  ocorrenciaTitle: {
+  notificacaoTitulo: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
   },
-  ocorrenciaDescription: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 5,
-  },
-  ocorrenciaDate: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 5,
-  },
-  ocorrenciaStatus: {
-    fontSize: 14,
-    color: "#4CAF50",
-    marginTop: 5,
-  },
-  form: {
-    width: "90%",
-    marginTop: 20,
-  },
-  input: {
-    backgroundColor: "#f1f1f1",
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 5,
-  },
-  createButton: {
-    backgroundColor: "#4CAF50",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
-    alignItems: "center",
-  },
-  createButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  noOcorrencias: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 20,
+  noNotificacoes: {
     textAlign: "center",
+    marginTop: 20,
+    fontSize: 14,
+    color: "#999",
   },
 });
