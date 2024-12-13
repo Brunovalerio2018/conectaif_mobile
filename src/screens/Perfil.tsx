@@ -51,8 +51,10 @@ const Perfil = ({ navigation }: any) => {
       setLoading(false);
       setLoadingText('Imagem carregada com sucesso!');
       
-      // Salvar a imagem no AsyncStorage
-      await AsyncStorage.setItem('profileImage', selectedImage);
+      // Salvar a imagem no AsyncStorage usando a matrícula do usuário
+      if (statusDoUsuario?.matricula) {
+        await AsyncStorage.setItem(`profileImage_${statusDoUsuario.matricula}`, selectedImage);
+      }
     }
   };
 
@@ -64,14 +66,16 @@ const Perfil = ({ navigation }: any) => {
       console.log('dduser', usuario);
       setStatusDoUsuario(usuario.userInfo || null);
 
-      // Carregar a imagem salva do AsyncStorage
-      const savedImage = await AsyncStorage.getItem('profileImage');
-      if (savedImage) {
-        setImagem(savedImage); // Atualizar o estado com a imagem salva
+   
+      if (statusDoUsuario?.id) {
+        const savedImage = await AsyncStorage.getItem(`profileImage_${statusDoUsuario.id}`);
+        if (savedImage) {
+          setImagem(savedImage); 
+        }
       }
     };
     fetchData();
-  }, []);
+  }, [statusDoUsuario?.matricula]);
 
   return (
     <ScrollView style={styles.container}>
