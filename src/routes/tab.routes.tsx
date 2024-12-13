@@ -1,14 +1,13 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import * as React from "react";
 import { Feather } from '@expo/vector-icons';
-import { Alert, Text, TouchableOpacity, StyleSheet, View, ActivityIndicator, Image } from "react-native";
+import { Alert, Text, TouchableOpacity, StyleSheet, View, Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Perfil from "../screens/Perfil";
 import Ocorrencias from "../screens/Ocorrencias";
 import Reunioes from "../screens/Reunioes";
 import Notificacoes from "../screens/Notificacoes";
 import { useNavigation } from "@react-navigation/native";
-import Documento from "../screens/Documento";
 
 const colors = {
   primaryGreen: '#359830',
@@ -27,24 +26,34 @@ const Drawer = createDrawerNavigator();
 export default function DrawerRoutes() {
   const navigation = useNavigation();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const rotation = React.useRef(new Animated.Value(0)).current; // Referência para o valor de rotação
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+
+    // Iniciar animação de rotação
+    Animated.timing(rotation, {
+      toValue: 1,  // Rotação total
+      duration: 5000, // 5 segundos
+      useNativeDriver: true, // Usar o driver nativo para animação suave
+    }).start();
+
     try {
       await AsyncStorage.removeItem('userToken');
-      
-      // Redireciona para a tela de login
-      setTimeout(() => {
-        navigation.navigate('Login');
-        setIsLoggingOut(false);
-      }, 3000); // Atraso de 3 segundos
-
+      // Redireciona para a tela de login após o logout
+      navigation.navigate('Login');
+      setIsLoggingOut(false);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
       setIsLoggingOut(false);
     }
   };
+
+  const spin = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'], // Cria a rotação de 0 a 360 graus
+  });
 
   return (
     <Drawer.Navigator
@@ -83,13 +92,6 @@ export default function DrawerRoutes() {
         }}
       />
       <Drawer.Screen
-        name="Documentos"
-        component={Documento}
-        options={{
-          drawerIcon: ({ color }) => DrawerIcon("file-text", color),
-        }}
-      />
-      <Drawer.Screen
         name="Notificação"
         component={Notificacoes}
         options={{
@@ -104,7 +106,9 @@ export default function DrawerRoutes() {
             <TouchableOpacity style={styles.logoutContainer} onPress={handleLogout}>
               {isLoggingOut ? (
                 <View style={styles.loadingContainer}>
-                  <View style={styles.spinner}></View>
+                  <Animated.View
+                    style={[styles.spinner, { transform: [{ rotate: spin }] }]}
+                  />
                   <Text style={styles.loadingText}>Saindo...</Text>
                 </View>
               ) : (
@@ -141,11 +145,6 @@ const styles = StyleSheet.create({
     color: colors.activeRed,
     fontWeight: 'bold',
   },
-  logoutLogo: {
-    marginLeft: 10,
-    width: 24,
-    height: 24,
-  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,18 +161,5 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryGreen,
     borderTopColor: '#98FB98',
     borderRadius: 50,
-    animation: 'spin 1s linear infinite',
-  },
-  footerContainer: {
-    alignItems: 'center', // Centraliza o logo horizontalmente
-    justifyContent: 'center', // Alinha o logo no centro verticalmente
-    marginTop: 150, // Adiciona espaço superior
-    marginBottom: 20, // Adiciona espaço inferior
-  },
-  logo: {
-    width: 250, // Ajusta o tamanho da largura do logo
-    height: 300,  // Ajusta o tamanho da altura do logo
-    resizeMode: 'contain', // Garante que a imagem se ajuste sem cortar
-    marginHorizontal: 10, // Adiciona espaço nas laterais
   },
 });
