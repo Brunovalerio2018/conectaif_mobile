@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, FlatList, TextInput, Button, Modal, Alert, ActivityIndicator, TouchableOpacity, Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../app";
+import api from "../app"; // Certifique-se de que o arquivo 'api.js' ou 'api.ts' está configurado corretamente.
 
 interface Anexo {
   titulo: string;
@@ -57,7 +57,7 @@ const Notificacao = () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/documento/anexos-notificacao/${idNotificacao}`);
-      setAnexos(response.data || []);
+      setAnexos(response.data);
     } catch (error) {
       console.error("Erro ao buscar anexos:", error);
       Alert.alert("Erro", "Não foi possível carregar os anexos.");
@@ -75,6 +75,9 @@ const Notificacao = () => {
       friction: 5,
     }).start();
     await fetchAnexos(notificacao.idnotificacao);
+
+    // Enviar alerta de "visualizada"
+    await api.patch(`/visualizada/${notificacao.idnotificacao}`);
   };
 
   const closeModal = () => {
@@ -96,10 +99,11 @@ const Notificacao = () => {
     </TouchableOpacity>
   );
 
-  const downloadFile = (url: string) => {
-    // Aqui você pode implementar a lógica de download. 
-    // Dependendo da sua necessidade, talvez queira abrir o arquivo diretamente ou baixá-lo.
+  const downloadFile = async (url: string) => {
     Alert.alert("Download", `Baixando: ${url}`);
+
+    // Enviar alerta de "download feito"
+    await api.patch(`/visualizada/${url}`); // O ID do documento pode ser enviado aqui para indicar que o download foi realizado
   };
 
   return (
@@ -145,7 +149,6 @@ const Notificacao = () => {
                           <Text style={styles.anexoTitulo}>{item.titulo}</Text>
                           <Text>Tipo: {item.tipo}</Text>
                           <Button title="Baixar" onPress={() => downloadFile(item.arquivo)} />
-                            
                         </View>
                       )}
                     />
