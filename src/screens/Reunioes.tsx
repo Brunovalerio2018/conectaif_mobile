@@ -1,91 +1,125 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, FlatList, TextInput, Alert } from "react-native";
-import api from "../app";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, FlatList, Alert } from 'react-native';
+import CalendarPicker from 'react-native-calendar-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../app';
+import moment from 'moment';
+import 'moment/locale/pt-br';
 
-interface Ocorrencia {
-  id: string;
-  titulo: string;
-  descricao: string;
+interface ReuniaoInfo {
   data: string;
-  status: string;
+  motivo: string;
+  idservidor: number;
+  idnotificacao: number;
 }
 
-export default function Ocorrencias() {
-  const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [tokenAcesso, setTokenAcesso] = useState<string | null>(null);
+export default function Reunioes() {
+  const [reunioes, setReunioes] = useState<ReuniaoInfo[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [tokenAcess, setTokenAcess] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState<any>({});
 
   useEffect(() => {
     const getToken = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem("userToken");
-        setTokenAcesso(storedToken);
+        const storedToken = await AsyncStorage.getItem('userToken');
+        setTokenAcess(storedToken);
       } catch (error) {
-        console.error("Erro ao buscar o token:", error);
+        console.error('Erro ao recuperar token:', error);
       }
     };
-
     getToken();
   }, []);
 
   useEffect(() => {
-    if (tokenAcesso) {
-      fetchOcorrencias(tokenAcesso);
+    if (tokenAcess) {
+      console.log('Token encontrado:', tokenAcess);
+      fetchReunioes(tokenAcess);
     }
-  }, [tokenAcesso]);
+  }, [tokenAcess]);
 
-  const fetchOcorrencias = async (token: string) => {
+  const fetchReunioes = async (token: string) => {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
-      const response = await api.get("/ocorrencia");
+      const response = await api.get<ReuniaoInfo[]>('/reuniao');
+      const data = response.data;
 
-      if (response.status === 200) {
-        const data = response.data;
-        setOcorrencias(
-          data.map((ocorrencia: any) => ({
-            id: ocorrencia.id,
-            titulo: ocorrencia.titulo || "Sem título",
-            descricao: ocorrencia.descricao || "Sem descrição",
-            data: ocorrencia.data || "Data não disponível",
-            status: ocorrencia.status || "pendente",
-          }))
-        );
+      if (data) {
+        setReunioes(data);
+
+        const newMarkedDates: any = {};
+        data.forEach((reuniao) => {
+          const dateKey = moment(reuniao.data).format('YYYY-MM-DD');
+          newMarkedDates[dateKey] = {
+            marked: true,
+            dotColor: 'red',
+            selectedColor: 'green',
+          };
+        });
+        setMarkedDates(newMarkedDates);
       } else {
-        Alert.alert("Erro", "Não foi possível carregar as ocorrências.");
+        Alert.alert('Erro', 'Erro ao buscar reuniões. Tente novamente mais tarde.');
       }
     } catch (error) {
-      console.error("Erro ao buscar ocorrências:", error);
-      Alert.alert("Erro", "Ocorreu um problema ao buscar as ocorrências.");
+      console.error('Erro ao buscar reuniões:', error);
+      Alert.alert('Erro', 'Não foi possível carregar as reuniões. Verifique sua conexão e tente novamente.');
     }
   };
 
-  const renderOcorrencia = ({ item }: { item: Ocorrencia }) => (
-    <View style={styles.ocorrenciaItem}>
-      <Text style={styles.ocorrenciaTitle}>{item.titulo}</Text>
-      <Text style={styles.ocorrenciaDescription}>{item.descricao}</Text>
-      <Text style={styles.ocorrenciaDate}>{item.data}</Text>
-      <Text style={styles.ocorrenciaStatus}>{item.status}</Text>
-    </View>
-  );
+  const filterByDate = (date: string) => {
+    setSelectedDate(date);
+    return reunioes.filter((reuniao) => moment(reuniao.data).isSame(date, 'day'));
+  };
 
   return (
     <View style={styles.container}>
+      {/* Calendário */}
+      <View style={styles.calendarWrapper}>
+        <CalendarPicker
+          onDateChange={(date) => {
+            const selectedDate = moment(date).format('YYYY-MM-DD');
+            console.log('Data selecionada:', selectedDate);
+            filterByDate(selectedDate);
+          }}
+          weekdays={['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']}
+          months={[
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+          ]}
+          todayTextStyle={{ color: '#7CFC00' }}
+          selectedDayColor="green"
+          selectedDayTextColor="white"
+          todayBackgroundColor="green"
+          markedDates={markedDates}
+          previousTitle="Anterior"
+          nextTitle="Próximo"
+        />
+      </View>
+
+      {/* Campo de busca */}
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar ocorrências..."
+        placeholder="Buscar reunião..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
+
+      {/* Lista de reuniões */}
       <FlatList
-        data={ocorrencias.filter(
-          (ocorrencia) =>
-            ocorrencia.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            ocorrencia.descricao.toLowerCase().includes(searchQuery.toLowerCase())
+        data={reunioes.filter(
+          (reuniao) =>
+            reuniao.motivo.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            (selectedDate ? moment(reuniao.data).isSame(selectedDate, 'day') : true)
         )}
-        renderItem={renderOcorrencia}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.noOcorrencias}>Nenhuma ocorrência encontrada</Text>}
+        keyExtractor={(item) => `${item.idservidor}-${item.idnotificacao}`}
+        renderItem={({ item }) => (
+          <View style={styles.reuniaoItem}>
+            <Text style={styles.reuniaoTitle}>{item.motivo}</Text>
+            <Text style={styles.reuniaoDate}>{`Data: ${moment(item.data).format('DD/MM/YYYY')}`}</Text>
+            <Text style={styles.reuniaoMotivo}>{`Motivo: ${item.motivo}`}</Text>
+          </View>
+        )}
       />
     </View>
   );
@@ -94,48 +128,50 @@ export default function Ocorrencias() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    paddingTop: 40,
+    backgroundColor: '#fff',
+    padding: 16,
+  },
+  calendarWrapper: {
+    marginBottom: 30,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
   },
   searchInput: {
-    width: "90%",
-    padding: 10,
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
     marginBottom: 20,
-    backgroundColor: "#f1f1f1",
+    paddingHorizontal: 10,
     borderRadius: 5,
-    fontSize: 16,
   },
-  ocorrenciaItem: {
-    backgroundColor: "#f9f9f9",
+  reuniaoItem: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
     padding: 15,
-    marginVertical: 5,
-    borderRadius: 8,
+    marginVertical: 8,
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: 'green',
   },
-  ocorrenciaTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+  reuniaoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
   },
-  ocorrenciaDescription: {
+  reuniaoDate: {
     fontSize: 14,
-    color: "#666",
-    marginTop: 5,
+    color: '#555',
+    marginBottom: 5,
   },
-  ocorrenciaDate: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 5,
-  },
-  ocorrenciaStatus: {
+  reuniaoMotivo: {
     fontSize: 14,
-    color: "#4CAF50",
-    marginTop: 5,
-  },
-  noOcorrencias: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 20,
-    textAlign: "center",
+    color: '#666',
   },
 });
