@@ -101,9 +101,9 @@ const Notificacao = () => {
 
   const downloadFile = async (url: string) => {
     Alert.alert("Download", `Baixando: ${url}`);
-
-    // Enviar alerta de "download feito"
-    await api.patch(`/visualizada/${url}`); // O ID do documento pode ser enviado aqui para indicar que o download foi realizado
+ 
+    await api.patch(`/visualizada/${url}`);
+    console.log('Download feito');
   };
 
   return (
@@ -122,7 +122,7 @@ const Notificacao = () => {
           data={notificacoes.filter((notificacao) =>
             notificacao.titulo.toLowerCase().includes(searchQuery.toLowerCase())
           )}
-          keyExtractor={(item) => item.idnotificacao}
+          keyExtractor={(item, index) => item.idnotificacao || `item-${index}`} // Certifique-se de que idnotificacao seja único
           renderItem={renderNotificacao}
           ListEmptyComponent={
             <Text style={styles.noNotificacoes}>Nenhuma notificação encontrada</Text>
@@ -143,7 +143,7 @@ const Notificacao = () => {
                   {anexos.length > 0 ? (
                     <FlatList
                       data={anexos}
-                      keyExtractor={(item) => item.titulo}
+                      keyExtractor={(item, index) => item.titulo || `anexo-${index}`} 
                       renderItem={({ item }) => (
                         <View style={styles.anexoItem}>
                           <Text style={styles.anexoTitulo}>{item.titulo}</Text>
