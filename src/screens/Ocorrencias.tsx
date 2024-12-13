@@ -39,18 +39,11 @@ export default function Ocorrencias() {
     try {
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
       const response = await api.get("/ocorrencia");
+      const data = response.data;
 
+      console.log(data);
       if (response.status === 200) {
-        const data = response.data;
-        setOcorrencias(
-          data.map((ocorrencia: any) => ({
-            id: ocorrencia.id,
-            titulo: ocorrencia.titulo || "Sem título",
-            descricao: ocorrencia.descricao || "Sem descrição",
-            data: ocorrencia.data || "Data não disponível",
-            status: ocorrencia.status || "pendente",
-          }))
-        );
+        setOcorrencias(data);
       } else {
         Alert.alert("Erro", "Não foi possível carregar as ocorrências.");
       }
@@ -94,48 +87,64 @@ export default function Ocorrencias() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
+    backgroundColor: "#f9f9f9",
     paddingTop: 40,
+    paddingHorizontal: 20,
   },
   searchInput: {
-    width: "90%",
-    padding: 10,
-    marginBottom: 20,
-    backgroundColor: "#f1f1f1",
-    borderRadius: 5,
+    width: "100%",
+    padding: 12,
+    marginBottom: 15,
+    backgroundColor: "#e0e0e0",
+    borderRadius: 8,
     fontSize: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   ocorrenciaItem: {
-    backgroundColor: "#f9f9f9",
-    padding: 15,
-    marginVertical: 5,
-    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    padding: 20,
+    marginVertical: 8,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+    transform: [{ translateX: 0 }, { translateY: 0 }],
+    transition: "transform 0.2s ease",
+  },
+  ocorrenciaItemHovered: {
+    transform: [{ translateX: 5 }, { translateY: -5 }],
   },
   ocorrenciaTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    marginBottom: 8,
   },
   ocorrenciaDescription: {
     fontSize: 14,
     color: "#666",
-    marginTop: 5,
+    marginBottom: 8,
   },
   ocorrenciaDate: {
     fontSize: 12,
-    color: "#888",
-    marginTop: 5,
+    color: "#999",
   },
   ocorrenciaStatus: {
     fontSize: 14,
+    fontWeight: "bold",
     color: "#4CAF50",
-    marginTop: 5,
+    marginTop: 8,
   },
   noOcorrencias: {
     fontSize: 16,
-    color: "#666",
-    marginTop: 20,
+    color: "#333",
     textAlign: "center",
+    marginTop: 20,
   },
 });
