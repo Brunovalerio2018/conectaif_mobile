@@ -1,193 +1,222 @@
-import React, { useState } from 'react';
-import {  View,
-          Text,
-          TextInput,
-          StyleSheet,
-          TouchableOpacity,
-          Image,
-          ActivityIndicator,
-          Alert,
-      } from 'react-native';
-      import { useNavigation } from '@react-navigation/native';
-      import api from '../../app';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Alert, 
+  Linking, 
+  TouchableOpacity, 
+  Image, 
+  ActivityIndicator 
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 
-const RecuperarConta = () => {
-  const [opcaoSelecionada, setOpcaoSelecionada] = useState('');
-  const [matriculaCpf, setMatriculaCpf] = useState('');
+// Interface para tipagem do estado do usuário
+interface StatusDoUsuario {
+  id: string;
+  nome: string;
+  email: string;
+  endereco: string;
+  cpf: string;
+  matricula: string;
+}
+
+const Perfil = ({ navigation }: any) => {
+  const [imagem, setImagem] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const navigation = useNavigation();
+  const [loadingText, setLoadingText] = useState('Carregando...');
+  const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
 
-  const handleAvancar = async () => {
-    if (!opcaoSelecionada || !matriculaCpf) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-      return;
+  // Função para verificar e solicitar permissões da galeria
+  const requestPermissions = async (): Promise<boolean> => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'A permissão para acessar a galeria é necessária!');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      Alert.alert('Erro', 'Ocorreu um erro ao solicitar permissões.');
+      return false;
     }
+  };
+
+  // Função para abrir a galeria e escolher a imagem
+  const handleImageUpload = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
 
     try {
-      setLoading(true);
-      
-      // Envia os dados para o backend para recuperação
-      const resposta = await api.post('/recuperar-conta', {
-        opcao: opcaoSelecionada,
-        matriculaCpf,
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaType: ImagePicker.MediaTypeOptions.Photo,
+        quality: 1,
       });
 
-
-      if (resposta.data.success) {
-        const emailResponse = await api.post('/email', {
-          destinatario: resposta.data.email, 
-          assunto: 'Instruções para recuperação de conta',
-          conteudo: 'Aqui estão as instruções para recuperar sua conta...',
-          anexos: '' 
-        });
-
-        if (emailResponse.status === 200) {
-          Alert.alert('Sucesso', 'As instruções para recuperação foram enviadas.');
-          navigation.navigate('LoginHome');
-        } else {
-          Alert.alert('Erro', 'Falha ao enviar o e-mail.');
-        }
-      } else {
-        Alert.alert('Erro', resposta.data.message || 'Erro ao processar a recuperação.');
+      if (result.canceled) {
+        console.log('Seleção de imagem cancelada.');
+        return;
       }
-    } catch (erro) {
-      console.error('Erro ao recuperar conta:', erro);
-      Alert.alert('Erro', 'Falha ao processar o pedido. Tente novamente mais tarde.');
-    } finally {
+
+      if (result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0].uri;
+        setLoading(true);
+        setLoadingText('Carregando imagem...');
+        setImagem(selectedImage);
+        await AsyncStorage.setItem('profileImage', selectedImage);
+        setLoading(false);
+        setLoadingText('Imagem carregada com sucesso!');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Ocorreu um erro ao carregar a imagem.');
       setLoading(false);
     }
   };
 
-  const handleVoltar = () => {
-    navigation.goBack();
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
+        const usuario = JSON.parse(dadosUsuario || '{}');
+        setStatusDoUsuario(usuario.userInfo || null);
+
+        const savedImage = await AsyncStorage.getItem('profileImage');
+        if (savedImage) {
+          setImagem(savedImage);
+        }
+      } catch (error) {
+        Alert.alert('Erro', 'Ocorreu um erro ao carregar os dados do usuário.');
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../../../assets/logoConectaIF.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+    <ScrollView style={styles.container}>
+      <View style={styles.cabecalhoPerfil}>
+        <TouchableOpacity onPress={handleImageUpload}>
+          <Image
+            source={{ uri: imagem || 'https://via.placeholder.com/100' }}
+            style={styles.imagemPerfil}
+          />
+        </TouchableOpacity>
+        <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Indisponível'}</Text>
+        <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
       </View>
 
-      <Text style={styles.title}>Recuperar Conta</Text>
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00ff00" />
+          <Text style={styles.loadingText}>{loadingText}</Text>
+        </View>
+      )}
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Digite sua matrícula ou CPF:</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Matrícula ou CPF"
-          value={matriculaCpf}
-          onChangeText={setMatriculaCpf}
-        />
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.neonButton}
-            onPress={handleAvancar}
-            activeOpacity={0.8}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Avançar</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.voltarButton}
-            onPress={handleVoltar}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.voltarButtonText}>Voltar</Text>
-          </TouchableOpacity>
+      <View style={styles.secaoContainer}>
+        <Text style={styles.tituloSecao}>Dados Pessoais</Text>
+        <View style={styles.itemLista}>
+          <Text style={styles.tituloItem}>Email:</Text>
+          <Text style={styles.textoItem}>{statusDoUsuario?.email || 'Não disponível'}</Text>
+        </View>
+        <View style={styles.itemLista}>
+          <Text style={styles.tituloItem}>Endereço:</Text>
+          <Text style={styles.textoItem}>{statusDoUsuario?.endereco || 'Não disponível'}</Text>
         </View>
       </View>
-    </View>
+
+      <View style={styles.botaoContainer}>
+        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://classroom.google.com')}>
+          <Text style={styles.textoBotao}>Sala de Aula</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://forms.google.com')}>
+          <Text style={styles.textoBotao}>Google Forms</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 30,
-    backgroundColor: '#ffffff',
+    padding: 10,
+    backgroundColor: '#f8f9fa',
   },
-  logoContainer: {
+  cabecalhoPerfil: {
     alignItems: 'center',
-    marginBottom: -10,
-  },
-  logo: {
-    width: 700,
-    height: 550,
-  },
-  title: {
-    fontSize: 22,
     marginBottom: 20,
-    textAlign: 'center',
-    color: '#000',
   },
-  inputContainer: {
-    marginTop: 20,
-    alignItems: 'center',
+  imagemPerfil: {
+    width: 100,
+    height: 100,
     borderRadius: 50,
+    marginBottom: 10,
   },
-  label: {
-    fontSize: 14,
-    marginBottom: 5,
+  nomePerfil: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#333',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 15,
-    borderRadius: 20,
-    backgroundColor: '#eaeaea',
-    width: '80%',
+  detalhesPerfil: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#555',
   },
-  buttonRow: {
+  loadingContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#555',
+    marginTop: 10,
+  },
+  secaoContainer: {
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  tituloSecao: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  itemLista: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
-    width: '80%',
+    marginBottom: 18,
   },
-  neonButton: {
-    backgroundColor: '#359830',
-    paddingVertical: 5,
-    paddingHorizontal: 20,
-    borderRadius: 50,
-    marginHorizontal: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-  },
-  buttonText: {
+  tituloItem: {
     fontSize: 14,
-    color: '#ffffff',
     fontWeight: 'bold',
-    textAlign: 'center',
+    color: '#333',
   },
-  voltarButton: {
-    backgroundColor: '#359830',
-    paddingVertical: 5,
-    paddingHorizontal: 20,
-    borderRadius: 50,
-    marginHorizontal: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-  },
-  voltarButtonText: {
+  textoItem: {
     fontSize: 14,
-    color: '#ffffff',
+    color: '#555',
+    flex: 1,
+    textAlign: 'right',
+  },
+  botaoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15,
+  },
+  botaoSecundario: {
+    flex: 1,
+    backgroundColor: '#359830',
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  textoBotao: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: 'bold',
-    textAlign: 'center',
   },
 });
 
-export default RecuperarConta;
+export default Perfil;
