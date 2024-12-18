@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View, FlatList, TextInput, Alert } from "react-native";
 import api from "../app";
@@ -104,9 +103,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    borderColor: '#359830',
+    borderWidth: 2, // Adicionando borda para destacar
   },
   ocorrenciaItem: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#DFFFD6",
     padding: 20,
     marginVertical: 8,
     borderRadius: 10,
@@ -115,16 +116,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5,
-    transform: [{ translateX: 0 }, { translateY: 0 }],
-    transition: "transform 0.2s ease",
-  },
-  ocorrenciaItemHovered: {
-    transform: [{ translateX: 5 }, { translateY: -5 }],
   },
   ocorrenciaTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
+    color: "#359830", // Usando a cor solicitada para o título
     marginBottom: 8,
   },
   ocorrenciaDescription: {
@@ -139,7 +135,7 @@ const styles = StyleSheet.create({
   ocorrenciaStatus: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#4CAF50",
+    color: "#359830", // Usando a cor solicitada para o status
     marginTop: 8,
   },
   noOcorrencias: {
