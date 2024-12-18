@@ -115,11 +115,12 @@ export default function Reunioes() {
         keyExtractor={(item) => `${item.idservidor}-${item.idnotificacao}`}
         renderItem={({ item }) => (
           <View style={styles.reuniaoItem}>
-            <Text style={styles.reuniaoTitle}>{item.motivo}</Text>
-            <Text style={styles.reuniaoDate}>{`Data: ${moment(item.data).format('DD/MM/YYYY')}`}</Text>
-            <Text style={styles.reuniaoMotivo}>{`Motivo: ${item.motivo}`}</Text>
+            <Text style={styles.reuniaoMotivo}>{item.motivo}</Text>
+            <Text style={styles.reuniaoData}>{moment(item.data).format('DD/MM/YYYY')}</Text>
+
           </View>
         )}
+        ListEmptyComponent={<Text style={styles.noReunioes}>Nenhuma reunião encontrada</Text>}
       />
     </View>
   );
@@ -128,50 +129,45 @@ export default function Reunioes() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
+    padding: 20,
+    backgroundColor: '#f4f4f4',
   },
   calendarWrapper: {
-    marginBottom: 30,
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
+    marginBottom: 20,
   },
   searchInput: {
     height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingLeft: 10,
     marginBottom: 20,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+    borderColor: '#359830',
+    borderWidth: 1,
   },
   reuniaoItem: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#DFFFD6',
+    padding: 20,
+    marginBottom: 10,
     borderRadius: 10,
-    padding: 15,
-    marginVertical: 8,
-    marginHorizontal: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: 'green',
-  },
-  reuniaoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  reuniaoDate: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 2,
   },
   reuniaoMotivo: {
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#359830',
+  },
+  reuniaoData: {
+    fontSize: 16,
     color: '#666',
+  },
+  noReunioes: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+    fontSize: 16,
   },
 });
