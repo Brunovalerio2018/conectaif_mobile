@@ -10,6 +10,7 @@ interface StatusDoUsuario {
   endereco: string;
   cpf: string;
   matricula: string;
+  fotoPerfil?: string;
 }
 
 const Perfil = ({ navigation }: any) => {
@@ -18,7 +19,6 @@ const Perfil = ({ navigation }: any) => {
   const [loadingText, setLoadingText] = useState('Carregando...');
   const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
 
-  // Função para verificar e solicitar permissões
   const requestPermissions = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -28,7 +28,6 @@ const Perfil = ({ navigation }: any) => {
     return true;
   };
 
-  // Função para abrir a galeria e escolher a imagem
   const handleImageUpload = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
@@ -47,42 +46,47 @@ const Perfil = ({ navigation }: any) => {
       const selectedImage = result.assets[0].uri;
       setLoading(true);
       setLoadingText('Carregando imagem...');
-      setImagem(selectedImage);  // Atualizando o estado com a imagem escolhida
+      setImagem(selectedImage);
       setLoading(false);
       setLoadingText('Imagem carregada com sucesso!');
       
-      // Salvar a imagem no AsyncStorage usando a matrícula do usuário
-      if (statusDoUsuario?.matricula) {
-        await AsyncStorage.setItem(`profileImage_${statusDoUsuario.matricula}`, selectedImage);
+      // Obtenha a matrícula do usuário e armazene a imagem associada
+      const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
+      const usuario = JSON.parse(dadosUsuario || '{}');
+      const matricula = usuario.userInfo?.matricula;
+
+      if (matricula) {
+        await AsyncStorage.setItem(`profileImage_${matricula}`, selectedImage);
       }
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = await AsyncStorage.getItem('userToken');
       const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
       const usuario = JSON.parse(dadosUsuario || '{}');
-      console.log('dduser', usuario);
       setStatusDoUsuario(usuario.userInfo || null);
 
-   
-      if (statusDoUsuario?.id) {
-        const savedImage = await AsyncStorage.getItem(`profileImage_${statusDoUsuario.id}`);
+      // Recupere a imagem associada à matrícula
+      const matricula = usuario.userInfo?.matricula;
+      if (matricula) {
+        const savedImage = await AsyncStorage.getItem(`profileImage_${matricula}`);
         if (savedImage) {
-          setImagem(savedImage); 
+          setImagem(savedImage);
+        } else if (usuario.userInfo?.fotoPerfil) {
+          setImagem(usuario.userInfo.fotoPerfil);
         }
       }
     };
     fetchData();
-  }, [statusDoUsuario?.matricula]);
+  }, []);
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.cabecalhoPerfil}>
         <TouchableOpacity onPress={handleImageUpload}>
           <Image
-            source={{ uri: imagem || 'https://via.placeholder.com/100' }} // Exibindo a imagem ou a imagem padrão
+            source={{ uri: imagem || 'https://via.placeholder.com/100' }}
             style={styles.imagemPerfil}
           />
         </TouchableOpacity>
@@ -90,7 +94,6 @@ const Perfil = ({ navigation }: any) => {
         <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
       </View>
 
-      {/* Barra de Loading */}
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00ff00" />
