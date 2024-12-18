@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Animated, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Animated, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -151,35 +151,26 @@ const LoginHome = () => {
         </Text>
       </TouchableOpacity>
 
-      {/* Barra de progresso de carregamento */}
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <Animated.View
-            style={[
-              styles.progressBar,
-              { width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
-            ]}
-          />
-        </View>
-      )}
 
       {/* Botão de login com spinner de carregamento */}
-      <TouchableOpacity
-        style={[styles.neonButton]}
-        onPress={handlePress}
-        disabled={loading} // Desabilita o botão durante o carregamento
-      >
-        {loading ? (
-          <Text style={styles.buttonText}>Carregando...</Text>
-        ) : (
+      {!loading ? (
+        <TouchableOpacity
+          style={[styles.neonButton]}
+          onPress={handlePress}
+        >
           <Text style={styles.buttonText}>Acessar</Text>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.loadingButton}>
+          <ActivityIndicator size="small" color="#fff" />
+        </View>
+      )}
 
       <Text style={styles.watermark}>SISTEMA UNIFICADO CONECTAIF</Text>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -192,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: -30,
   },
   logo: {
-    width: 600,
+    width: 650,
     height: 550,
     marginVertical: -90,
   },
@@ -269,6 +260,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 5,
   },
+  loadingButton: {
+    backgroundColor: '#359830',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: -80,
+  },
   watermark: {
     position: 'absolute',
     top: 65,
@@ -296,17 +296,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   loadingContainer: {
-    width: '80%',
-    height: 0,
-    backgroundColor: '#eaeaea',
-    borderRadius: 20,
-    marginVertical: 0,
-    
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#359830',
-    borderRadius: 10,
+    marginVertical: -10,
   },
 });
 
