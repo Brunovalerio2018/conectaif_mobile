@@ -1,222 +1,175 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Alert, 
-  Linking, 
-  TouchableOpacity, 
-  Image, 
-  ActivityIndicator 
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Modal, TouchableOpacity, Image, Animated, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-// Interface para tipagem do estado do usuário
-interface StatusDoUsuario {
-  id: string;
-  nome: string;
-  email: string;
-  endereco: string;
-  cpf: string;
-  matricula: string;
-}
+const RecuperarConta = () => {
+  const [email, setEmail] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [identifierType, setIdentifierType] = useState('email');
+  const logoAnim = new Animated.Value(0);
+  const navigation = useNavigation(); // Para navegação
 
-const Perfil = ({ navigation }: any) => {
-  const [imagem, setImagem] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('Carregando...');
-  const [statusDoUsuario, setStatusDoUsuario] = useState<StatusDoUsuario | null>(null);
-
-  // Função para verificar e solicitar permissões da galeria
-  const requestPermissions = async (): Promise<boolean> => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permissão necessária', 'A permissão para acessar a galeria é necessária!');
-        return false;
-      }
-      return true;
-    } catch (error) {
-      Alert.alert('Erro', 'Ocorreu um erro ao solicitar permissões.');
-      return false;
+  const handleRecuperarConta = () => {
+    if (!email.trim()) {
+      Alert.alert('Por favor, coloque seu email.');
+      return;
     }
+    console.log(`Identificador enviado: ${email} (${identifierType})`);
+    setModalVisible(false);
   };
 
-  // Função para abrir a galeria e escolher a imagem
-  const handleImageUpload = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaType: ImagePicker.MediaTypeOptions.Photo,
-        quality: 1,
-      });
-
-      if (result.canceled) {
-        console.log('Seleção de imagem cancelada.');
-        return;
-      }
-
-      if (result.assets && result.assets.length > 0) {
-        const selectedImage = result.assets[0].uri;
-        setLoading(true);
-        setLoadingText('Carregando imagem...');
-        setImagem(selectedImage);
-        await AsyncStorage.setItem('profileImage', selectedImage);
-        setLoading(false);
-        setLoadingText('Imagem carregada com sucesso!');
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Ocorreu um erro ao carregar a imagem.');
-      setLoading(false);
-    }
+  const startLogoAnimation = () => {
+    Animated.timing(logoAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
-        const usuario = JSON.parse(dadosUsuario || '{}');
-        setStatusDoUsuario(usuario.userInfo || null);
-
-        const savedImage = await AsyncStorage.getItem('profileImage');
-        if (savedImage) {
-          setImagem(savedImage);
-        }
-      } catch (error) {
-        Alert.alert('Erro', 'Ocorreu um erro ao carregar os dados do usuário.');
-      }
-    };
-
-    fetchData();
-  }, []);
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.cabecalhoPerfil}>
-        <TouchableOpacity onPress={handleImageUpload}>
-          <Image
-            source={{ uri: imagem || 'https://via.placeholder.com/100' }}
-            style={styles.imagemPerfil}
-          />
+    <View style={styles.container}>
+      <Animated.View style={[styles.logoContainer, { transform: [{ translateY: logoAnim }] }]}>
+        <Image
+          source={require('../../../assets/logoConectaIF.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </Animated.View>
+
+      {/* Container com os botões Voltar e Recuperar Conta */}
+      <View style={styles.actionContainer}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.nomePerfil}>{statusDoUsuario?.nome || 'Nome Indisponível'}</Text>
-        <Text style={styles.detalhesPerfil}>Matrícula: {statusDoUsuario?.matricula || 'Não disponível'}</Text>
-      </View>
 
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00ff00" />
-          <Text style={styles.loadingText}>{loadingText}</Text>
-        </View>
-      )}
-
-      <View style={styles.secaoContainer}>
-        <Text style={styles.tituloSecao}>Dados Pessoais</Text>
-        <View style={styles.itemLista}>
-          <Text style={styles.tituloItem}>Email:</Text>
-          <Text style={styles.textoItem}>{statusDoUsuario?.email || 'Não disponível'}</Text>
-        </View>
-        <View style={styles.itemLista}>
-          <Text style={styles.tituloItem}>Endereço:</Text>
-          <Text style={styles.textoItem}>{statusDoUsuario?.endereco || 'Não disponível'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.botaoContainer}>
-        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://classroom.google.com')}>
-          <Text style={styles.textoBotao}>Sala de Aula</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.botaoSecundario} onPress={() => Linking.openURL('https://forms.google.com')}>
-          <Text style={styles.textoBotao}>Google Forms</Text>
+        <TouchableOpacity onPress={() => { setModalVisible(true); startLogoAnimation(); }}>
+          <Text style={styles.recuperarContaText}>Recuperar conta...</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Recuperar Conta</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder={`Digite seu email ${identifierType === 'email'}`}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType={identifierType === 'email' ? 'email-address' : 'default'}
+            />
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={[styles.button, styles.sendButton]} onPress={handleRecuperarConta}>
+                <Text style={styles.buttonText}>Enviar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setModalVisible(false)}>
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
-    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
   },
-  cabecalhoPerfil: {
+  actionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -80,
+  },
+  backButton: {
+    marginRight: 15,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#359830',
+    borderRadius: 18,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  recuperarContaText: {
+    color: 'blue',
+    textDecorationLine: 'underline',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+  },
+  logoContainer: {
     alignItems: 'center',
     marginBottom: 20,
   },
-  imagemPerfil: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+  logo: {
+    width: 550,
+    height: 850,
   },
-  nomePerfil: {
-    fontSize: 20,
+  modalTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    marginBottom: 35,
+    textAlign: 'center',
+    color: '#000',
   },
-  detalhesPerfil: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#555',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#555',
-    marginTop: 10,
-  },
-  secaoContainer: {
-    marginBottom: 10,
+  input: {
+    height: 40,
+    borderWidth: 2,
+    borderColor: '#359830',
+    borderRadius: 20,
+    backgroundColor: '#eaeaea',
+    width: '100%',
     paddingHorizontal: 10,
+    marginBottom: 20,
   },
-  tituloSecao: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  itemLista: {
+  buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    width: '100%',
+    marginTop: 10,
   },
-  tituloItem: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  textoItem: {
-    fontSize: 14,
-    color: '#555',
-    flex: 1,
-    textAlign: 'right',
-  },
-  botaoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-  },
-  botaoSecundario: {
-    flex: 1,
-    backgroundColor: '#359830',
-    paddingVertical: 8,
-    marginHorizontal: 20,
-    borderRadius: 15,
+  button: {
+    width: '45%',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 18,
+    marginHorizontal: 5,
   },
-  textoBotao: {
+  sendButton: {
+    backgroundColor: '#359830',
+  },
+  cancelButton: {
+    backgroundColor: 'red',
+  },
+  buttonText: {
     color: '#fff',
-    fontSize: 14,
     fontWeight: 'bold',
   },
 });
 
-export default Perfil;
+export default RecuperarConta;
