@@ -1,41 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Modal, TouchableOpacity, Image, Animated, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import api from '../../app'; // Certifique-se de que esse caminho está correto.
 
 const RecuperarConta = () => {
   const [email, setEmail] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [identifierType, setIdentifierType] = useState('email');
   const logoAnim = new Animated.Value(0);
-  const navigation = useNavigation();
+  const navigation = useNavigation(); 
 
-  const handleRecuperarConta = async () => {
+  const handleRecuperarConta = () => {
     if (!email.trim()) {
-      Alert.alert('Por favor, insira seu e-mail.');
+      Alert.alert('Por favor, coloque seu email.');
       return;
     }
-
-    try {
-      // Simula o delay do carregamento e envia a requisição POST para a API
-      setTimeout(async () => {
-        const response = await api.post('/email', {
-          destinatario: email,
-          assunto: 'Recuperação de Conta',
-          conteudo: 'Segue o link para recuperação de sua conta.',
-          anexos: ''
-        });
-
-        if (response?.status === 201) {
-          Alert.alert('E-mail enviado com sucesso!', 'Por favor, verifique sua caixa de entrada.');
-          setModalVisible(false); // Fecha o modal
-        } else {
-          throw new Error('Falha ao enviar o e-mail.');
-        }
-      }, 1000); // Simula um delay de 1 segundo
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Erro ao enviar o e-mail.', 'Tente novamente mais tarde.');
-    }
+    console.log(`Identificador enviado: ${email} (${identifierType})`);
+    setModalVisible(false);
   };
 
   const startLogoAnimation = () => {
@@ -56,6 +36,7 @@ const RecuperarConta = () => {
         />
       </Animated.View>
 
+      {/* Container com os botões Voltar e Recuperar Conta */}
       <View style={styles.actionContainer}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Voltar</Text>
@@ -78,10 +59,10 @@ const RecuperarConta = () => {
 
             <TextInput
               style={styles.input}
-              placeholder="Digite seu email"
+              placeholder={`Digite seu email ${identifierType === 'email'}`}
               value={email}
               onChangeText={setEmail}
-              keyboardType="email-address"
+              keyboardType={identifierType === 'email' ? 'email-address' : 'default'}
             />
 
             <View style={styles.buttonContainer}>
