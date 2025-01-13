@@ -50,13 +50,12 @@ const Perfil = ({ navigation }: any) => {
       setLoading(false);
       setLoadingText('Imagem carregada com sucesso!');
       
-      // Obtenha a matrícula do usuário e armazene a imagem associada
       const dadosUsuario = await AsyncStorage.getItem('dadosUsuario');
       const usuario = JSON.parse(dadosUsuario || '{}');
-      const matricula = usuario.userInfo?.matricula;
+      const identificacao = usuario.userInfo?.id;
 
-      if (matricula) {
-        await AsyncStorage.setItem(`profileImage_${matricula}`, selectedImage);
+      if (identificacao) {
+        await AsyncStorage.setItem(`profileImage_${identificacao}`, selectedImage);
       }
     }
   };
