@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginHome from '../screens/Principal/Login';
 import RecuperarConta from '../screens/Principal/RecuperarConta';
 import TabRoutes from './tab.routes';
-import Notificacoes from '../screens/Notificacoes';
 
 
 const Stack = createNativeStackNavigator();
