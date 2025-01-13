@@ -1,7 +1,7 @@
-import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
 import * as React from "react";
 import { Feather } from '@expo/vector-icons';
-import { Alert, Text, TouchableOpacity, StyleSheet, View, Animated } from "react-native";
+import { Alert, Text, TouchableOpacity, StyleSheet, View, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Perfil from "../screens/Perfil";
 import Ocorrencias from "../screens/Ocorrencias";
@@ -26,23 +26,31 @@ const Drawer = createDrawerNavigator();
 export default function DrawerRoutes() {
   const navigation = useNavigation();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  const rotation = React.useRef(new Animated.Value(0)).current; // Referência para o valor de rotação
+  const [dots, setDots] = React.useState(".");
+
+  React.useEffect(() => {
+    if (isLoggingOut) {
+      const interval = setInterval(() => {
+        setDots((prevDots) => {
+          if (prevDots.length < 5) {
+            return prevDots + ".";
+          } else {
+            return ".";
+          }
+        });
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggingOut]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-
-    // Iniciar animação de rotação
-    Animated.timing(rotation, {
-      toValue: 1,  // Rotação total
-      duration: 5000, // 5 segundos
-      useNativeDriver: true, // Usar o driver nativo para animação suave
-    }).start();
-
     try {
       await AsyncStorage.removeItem('userToken');
-      // Redireciona para a tela de login após o logout
-      navigation.navigate('Login');
-      setIsLoggingOut(false);
+      setTimeout(() => {
+        navigation.navigate('Login');
+        setIsLoggingOut(false);
+      }, 3000); // 3 segundos de atraso antes de navegar para a tela de login
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       Alert.alert('Erro', 'Falha ao sair. Tente novamente mais tarde.');
@@ -50,13 +58,21 @@ export default function DrawerRoutes() {
     }
   };
 
-  const spin = rotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'], // Cria a rotação de 0 a 360 graus
-  });
+  const CustomDrawerContent = (props) => (
+    <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
+      <DrawerItemList {...props} />
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../assets/logoConectaIF_branco.png')} // Substitua pelo caminho do seu logo
+          style={styles.logo}
+        />
+      </View>
+    </DrawerContentScrollView>
+  );
 
   return (
     <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: colors.primaryGreen },
@@ -66,7 +82,7 @@ export default function DrawerRoutes() {
         drawerInactiveTintColor: colors.white,
         drawerStyle: {
           backgroundColor: colors.primaryGreen,
-          width: 215,
+          width: 255,
         },
       }}
     >
@@ -106,10 +122,8 @@ export default function DrawerRoutes() {
             <TouchableOpacity style={styles.logoutContainer} onPress={handleLogout}>
               {isLoggingOut ? (
                 <View style={styles.loadingContainer}>
-                  <Animated.View
-                    style={[styles.spinner, { transform: [{ rotate: spin }] }]}
-                  />
-                  <Text style={styles.loadingText}>Saindo...</Text>
+                  <View style={styles.spinner}></View>
+                  <Text style={styles.loadingText}>Saindo{dots}</Text>
                 </View>
               ) : (
                 <View style={styles.logoutContent}>
@@ -127,13 +141,28 @@ export default function DrawerRoutes() {
 }
 
 const styles = StyleSheet.create({
+  drawerContent: {
+    justifyContent: 'space-between',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+    marginBottom: 20,
+  },
+  logo: {
+    width: 200,
+    height: 500,
+    resizeMode: 'contain',
+  },
   logoutContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
     marginHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGray,
   },
   logoutContent: {
     flexDirection: 'row',
@@ -161,5 +190,6 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryGreen,
     borderTopColor: '#98FB98',
     borderRadius: 50,
+    animation: 'spin 1s linear infinite',
   },
 });
